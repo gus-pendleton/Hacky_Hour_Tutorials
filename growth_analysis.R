@@ -47,12 +47,12 @@ combined_and_blanked%>%
   ggplot(aes(x = Time, y = OD_Blanked, color = Strain))+
   geom_point()+
   scale_y_continuous(trans = "log2")
-  
+
 
 # Calculating doubling times
-combined_and_blanked%>%
+doubling_times <- combined_and_blanked%>%
   filter(Time < 4)%>% # Limit to data to log phase
-  nest_by(Strain, .key = "growth_df")%>% # Nest, so that we have little mini dataframes for each strain
+  nest_by(Strain, Replicate, .key = "growth_df")%>% # Nest, so that we have little mini dataframes for each strain and replicate
   mutate(models = list(lm(log2(OD_Blanked) ~ Time, data = growth_df)), # Run a linear model to calculate the slope for log2 of OD versus Time
          slope = models$coefficients[2], # Extract the slope from the coefficients
          r_square = summary(models)$adj.r.squared, # See the adjusted r squared
