@@ -186,12 +186,13 @@ baseline_plot <- combined_and_blanked %>%
                fun.max = \(x)mean(x) + sd(x)) + 
   geom_jitter(alpha = 0.3, width = 0.2) + # Add in our actual datapoints, but make them light so they aren't too distracting
   scale_y_continuous(trans = "log2") + 
-  scale_color_manual(values = c("#0848a3","#F69200"))
+  scale_color_manual(values = c("#0848a3","#F69200"),
+                     labels = c("WT", expression(Delta*italic(yfpA)))) # Weirdly, this is also where we can change the labels in our legend, since the legend is based on color. Notice how I use expression to include greek symbols and italics
 
 # Do we feel good about this? It's functional - it shows all the data we need.
 # But shouldn't things also be pretty?
 
-# We can control all of the dressing on our ggplot to make it more visuallu appealing
+# We can control all of the dressing on our ggplot to make it more visually appealing
 baseline_plot + 
   labs(x = "Time (hrs)", y = "Optical Density") + # Change axis labels
   theme(axis.line = element_line(color = "black"), # Make our axis lines black
@@ -199,6 +200,7 @@ baseline_plot +
         axis.title = element_text(size = 12), # Make our axis titles bigger
         legend.text = element_text(size = 10), # Make our legend text bigger
         legend.title = element_text(size = 12), # Make our legend title bigger
+        legend.text.align = 0, # Align our legend text to the left
         panel.background = element_rect(fill = "white"), # Change the plot background to white, instead of grey
         panel.grid.major = element_line(color = "grey80")) # Add in grey gridlines
 

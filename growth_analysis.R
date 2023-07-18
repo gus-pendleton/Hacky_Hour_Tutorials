@@ -58,3 +58,137 @@ doubling_times <- combined_and_blanked%>%
          r_square = summary(models)$adj.r.squared, # See the adjusted r squared
          doubling_time_hr = 1 / slope, # Calculate doubling time
          doubling_time_min = doubling_time_hr * 60) # Convert to minutes
+
+
+
+
+# CODE WE WROTE DURING WORKSHOP
+# Plotting with ggplot
+
+# ggplot only accepts data in long format
+
+growth_data
+
+ggplot(growth_data, aes(x = Time, y = S1_1)) + 
+  geom_point()
+
+combined_and_blanked
+
+ggplot(combined_and_blanked, aes(x = Time, y = OD_Blanked)) + 
+  geom_point()
+
+# Aesthetics (aes) can be either dependent on our data, or independent
+
+# Aesthetics independent of the data
+ggplot(combined_and_blanked, aes(x = Time, y = OD_Blanked)) + 
+  geom_point(color = "red", fill = "black", shape = 24, size = 5, alpha = .5)
+
+# Aesthetic dependent on the data
+ggplot(combined_and_blanked, aes(x = Time, y = OD_Blanked, shape = Strain)) + 
+  geom_point()
+
+# ggplot's are based on layering
+
+ggplot(combined_and_blanked, aes(x = Time, y = OD_Blanked, color = Strain)) + 
+  geom_point() + 
+  geom_line() + 
+  geom_boxplot()
+
+
+# Let's start making our nice growth curve
+
+ggplot(combined_and_blanked, aes(x = Time, y = OD_Blanked, color = Strain)) + 
+  geom_point()
+
+
+# Let's use scales to more accurately portray our data
+
+ggplot(combined_and_blanked, aes(x = Time, y = OD_Blanked, color = Strain)) + 
+  geom_point() + 
+  scale_y_continuous(trans = "log2") + 
+  scale_color_manual(values = c("red","black")) + 
+  scale_x_continuous(limits = c(0,4))
+
+
+# Let's aggregate out data, first using a dplyr approach
+
+combined_and_blanked %>%
+  group_by(Strain, Time) %>%
+  summarize(mean_od = mean(OD_Blanked),
+            sd = sd(OD_Blanked),
+            lower = mean_od - sd,
+            upper = mean_od + sd) %>%
+  ggplot(aes(x = Time, y = mean_od, color = Strain)) + 
+  geom_point() + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = .25, color = "black")
+
+
+# We can also do this, just in ggplot
+# And we use "stat" to do so
+
+lower <- function(data){
+  mean(data) - sd(data)
+}
+
+upper <- function(data){
+  mean(data) + sd(data)
+}
+
+
+ggplot(combined_and_blanked, aes(x = Time, y = OD_Blanked, color = Strain)) + 
+  stat_summary(geom = "point", fun = mean) + 
+  stat_summary(geom = "line", fun = mean) + 
+  stat_summary(geom = "errorbar", width = 0.25,
+               fun.min = lower,
+               fun.max = upper)
+
+
+# We can separate data using facets
+
+ggplot(combined_and_blanked, aes(x = Time, y = OD_Blanked, color = Strain)) + 
+  geom_point() + 
+  facet_wrap(~Replicate)
+
+ggplot(combined_and_blanked, aes(x = Time, y = OD_Blanked, color = Strain)) + 
+  geom_point() + 
+  facet_wrap(~Strain, scales = "free_y")
+
+
+ggplot(combined_and_blanked, aes(x = Time, y = OD_Blanked, color = Strain)) + 
+  geom_point() + 
+  facet_grid(rows = vars(Strain), cols = vars(Replicate))
+
+
+# Let's actually make a good looking plot
+
+
+baseline_plot <- combined_and_blanked %>%
+  group_by(Strain, Time) %>%
+  summarize(mean_od = mean(OD_Blanked),
+            sd = sd(OD_Blanked),
+            lower = mean_od - sd,
+            upper = mean_od + sd) %>%
+  ggplot(aes(x = Time, y = mean_od, color = Strain)) + 
+  geom_point(size = 2) + 
+  geom_line() + 
+  geom_errorbar(aes(ymin = lower, ymax = upper), width = .25) + 
+  scale_y_continuous(trans = "log2") + 
+  scale_color_manual(values = c("#0848a3", "#F69200"), 
+                     labels = c("WT",expression(Delta*italic(dakA))))
+
+final_plot <- baseline_plot + 
+  labs(x = "Time (hr)", y = expression(OD[600])) + 
+  theme(axis.line = element_line(color = "black"),
+        panel.background = element_rect(fill = "white"),
+        axis.title = element_text(size = 12),
+        axis.text = element_text(size = 10),
+        legend.text.align = 0,
+        legend.key = element_rect(fill = "white"),
+        panel.grid.major = element_line(color = "grey80"))
+
+final_plot
+
+# Let's save our work
+
+ggsave(final_plot, filename = "growth_curve.png", width = 5, height = 3,
+       units = "in", dpi = 300)
