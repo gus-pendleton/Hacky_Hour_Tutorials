@@ -1,0 +1,1 @@
+In this tutorial, we use data about the membrane lipids composition and membrane rigidity to explore how to use t-tests and ANOVAs. Data provided is an excerpt from data published [here](https://journals.asm.org/doi/full/10.1128/mbio.01472-22?af=R)
