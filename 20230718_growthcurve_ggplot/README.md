@@ -1,0 +1,1 @@
+In this tutorial, we read in plate-reader data from a growth curve which includes a fluorescent reporter. Using functions in the dplyr and tidyr packages, we convert the data to a tidy format. Then, we plot these data in ggplot2 and save them as images. 

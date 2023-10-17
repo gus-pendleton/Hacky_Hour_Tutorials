@@ -1,4 +1,3 @@
-# GrowthCurve_Tutorial
-Cornell Hacky Hour Growth Curve Tutorial
+# Cornell Hacky Hour Activities
 
-Instructive code to help leanring common tidyverse functions to analyze growth curve data, alongside examples of ggplotting.
+In this repo, I store data, code, and outputs from Hacky Hour tutorials I teach. If you are contributing tutorials, please keep in mind that each tutorial should be self-contained, include no absolute filepaths, and explicitly load any packages required. 
