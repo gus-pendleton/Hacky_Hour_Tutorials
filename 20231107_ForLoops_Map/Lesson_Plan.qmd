@@ -110,7 +110,7 @@ taylor_dfs <- for(file in our_files){
 }
 ```
 
-Hmm, it didn't like that either. It looks like R doesn't like assign an entire for loop, which is an active process, into a file. 
+Hmm, it didn't like that either. It looks like R doesn't like to assign an entire for loop, which is an active process, into a file. 
 
 Maybe we need to do the assignment within the loop itself?
 
@@ -210,7 +210,7 @@ plot <- taylor_full_df %>%
          album_release = factor(album_release), # I like them spaced out regularly instead of as a datetime
          Metric = factor(Metric, levels = c("danceability", "energy", "loudness"), labels = c("Danceability","Energy","Loudness"))) %>% # Clean up the labels
   ggplot(aes(x = album_release, y = Score)) + # Set our x and y axes
-  facet_wrap(~Metric, ncol = 1, scales = "free_y") + # Facet by Metrix, stacked in one column, free y scales
+  facet_wrap(~Metric, ncol = 1, scales = "free_y") + # Facet by Metric, stacked in one column, free y scales
   scale_y_continuous(expand = expansion(mult = 0.3)) +  # Give some space on the y axis so we don't crop images
   geom_image(aes(image = cover), size = .3)+  # Add in images as our data points
   labs(x = "Release Date", y = "Score") +  # Relabel axes
