@@ -1,0 +1,85 @@
+---
+title: "Hacky Hour 20231114 - Linear Regression"
+format: pdf
+editor: visual
+indent: true
+linestretch: 1.5
+execute:
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+## Goal of Today: Linear Regression
+
+Hi y'all. Today at Hacky Hour, we'll learn a bit about running linear regression in R. For today's data, we're using a subset of data from TidyTuesday last year. You can find the entire data set [here](https://github.com/rfordatascience/tidytuesday/tree/master/data/2022/2022-11-01) from Tanya Shapiro. Through this lesson, we will learn:
+
+1.  How to make and interpret a linear model in R
+2.  How to assess the *quality* of your linear model
+3.  When transformations may be necessary
+4.  How to include a linear model in a ggplot
+
+## Reading in Our Data
+
+We can read in our data from the data folder. We'll use the `read_csv()` function from `readr`; I'm going to load the entire `tidyverse` package because I often use functions from multiple packages within it.
+
+```{r reading in our data}
+
+horror_data <- read_csv("data/horror_movies.csv") # Read in our data
+
+glimpse(horror_data)
+```
+
+Our data has seven columns, including the title, release date, the revenue it earned, its budget, its run-time, and then a popularity score based on user votes from the website TMDB.
+
+We are interested in a few main questions:
+
+1.  How does budget impact the revenue a movie earns?
+2.  How does budget impact the popularity of a movie?
+3.  What is the relationship between popularity and run-time?
+
+## Making a Linear Model in R
+
+To begin, we're going to be bad statisticians, and make a linear model before even LOOKING at our data. I'll make a linear model using the `lm()` function. The simplest linear model includes only one term - the y intercept:
+
+```{r making a linear model}
+
+single_lm <- lm(revenue ~ 1, data = data)
+
+summary(single_lm)
+```
+
+Hmmm, what does this output tell us? I we look at the `Coefficients:` section, we see the term `(Intercept)`, and the value 72147793. I wonder where we got that number?
+
+```{r unpacking single_lm}
+
+mean(horror_data$revenue)
+
+```
+
+Wow - it's just the mean! If we think of a linear model as giving us the "best guess" for what a value in our response variable will be, it makes sense that if we provide no predictor variables, a model's best guess will be the mean. This isn't very helpful though. This time, let's create a model where revenue is the response variable, and budget is the predictor:
+
+```{r revenue v budget}
+
+rvb_lm <- lm(revenue~budget, data = horror_data)
+
+summary(rvb_lm)
+
+```
+
+
+```{r plotting revenue v budget}
+intercept <- rvb_lm$coefficients[1]
+slope <- rvb_lm$coefficients[2]
+ggplot(horror_data, aes(x = budget, y = revenue)) + 
+  geom_point() + 
+  geom_abline(slope = slope, intercept = intercept)
+
+
+# This is actually simpler to do on the fly with "geom_smooth"
+ggplot(horror_data, aes(x = budget, y = revenue)) + 
+  geom_point() + 
+  geom_smooth(method = "lm")
+
+```

@@ -110,7 +110,7 @@ taylor_dfs <- for(file in our_files){
 }
 ```
 
-Hmm, it didn't like that either. It looks like R doesn't like to assign an entire for loop, which is an active process, into a file. 
+Hmm, it didn't like that either. It looks like R doesn't like to assign an entire for loop, which is an active process, into a file.
 
 Maybe we need to do the assignment within the loop itself?
 
@@ -133,9 +133,9 @@ for(index in 1:length(our_files)){ # Instead of looping on each filename in our_
 
 ```
 
-If you explore our taylor_dfs_list object in the Environment pane, you can see we now have a list of 13 dataframes, all of which have matching columns. There are some downsides to this approach, however. For one, we've don't know which dataframe is from which csv file, or which album. We would need to manually add that data in. Plus. we want to have all of these data in one big dataframe. 
+If you explore our taylor_dfs_list object in the Environment pane, you can see we now have a list of 13 dataframes, all of which have matching columns. There are some downsides to this approach, however. For one, we've don't know which dataframe is from which csv file, or which album. We would need to manually add that data in. Plus. we want to have all of these data in one big dataframe.
 
-Both of these problems are fixable using base R, but there are easier approaches which address them directly using the purrr package. Purrr is designed to make iterating across objects cleaner, clearer, and safer (less chances of invisible errors), and it all revolves around the "map" function. Let's do the same thing we did above, but using map from purrr. 
+Both of these problems are fixable using base R, but there are easier approaches which address them directly using the purrr package. Purrr is designed to make iterating across objects cleaner, clearer, and safer (less chances of invisible errors), and it all revolves around the "map" function. Let's do the same thing we did above, but using map from purrr.
 
 ```{r read in data with map}
 
@@ -145,7 +145,7 @@ taylor_dfs_map <- map(our_files, read_csv) # Our first argument is our iterable 
 
 ```
 
-Wow, with only one line of code, we can see that we produced exactly the same result. We didn't need to initialize an empty list, because map returns a list by default. We still don't know which dataframe is from which csv, however. The nice thing about map is that if our iterable object (our_files) has 'names', those names will automatically be used for the resulting list. Let's add names to our_files, and run the map command again. 
+Wow, with only one line of code, we can see that we produced exactly the same result. We didn't need to initialize an empty list, because map returns a list by default. We still don't know which dataframe is from which csv, however. The nice thing about map is that if our iterable object (our_files) has 'names', those names will automatically be used for the resulting list. Let's add names to our_files, and run the map command again.
 
 ```{r read in data with map and names}
 
@@ -178,7 +178,7 @@ taylor_dfs_map[1]
 
 ```
 
-Woohoo! Now this is looking much nicer. However, we still want to get all of our data into a dataframe! This is where one of my favorite functions comes in - map_dfr(), also from the purrr package. This will read in our data and automatically add each new dataframe onto the bottom of the last one - combining all of our separate dataframes into one! 
+Woohoo! Now this is looking much nicer. However, we still want to get all of our data into a dataframe! This is where one of my favorite functions comes in - map_dfr(), also from the purrr package. This will read in our data and automatically add each new dataframe onto the bottom of the last one - combining all of our separate dataframes into one!
 
 ```{r read in data with map_dfr}
 
@@ -187,7 +187,7 @@ taylor_full_df <- map_dfr(our_files, read_csv, .id = "Album") # .id argument is 
 glimpse(taylor_full_df)
 ```
 
-Now we see we've read in all the data, combined them into a large dataframe, we we have a new column called "Album" which tracks which album each song came from based on the names of the our_files vector. 
+Now we see we've read in all the data, combined them into a large dataframe, we we have a new column called "Album" which tracks which album each song came from based on the names of the our_files vector.
 
 That's all we'll cover concerning for loops and map today - hope you enjoyed yourself! Now go ahead and analyze this data however you want - I made a plot below for fun!
 
