@@ -98,7 +98,7 @@ As predicted, it looks like our residuals are sitting just left of zero and are 
 
 This is the meat of the linear model. If we have a standard linear equation:
 
-$$ y = \beta_{\circ} + \beta_{1}x $$ 
+$$ y = \beta_{\circ} + \beta_{1}x $$
 
 $\beta_{\circ}$ is our y-intercept and $\beta_{1}$ is our slope. R has estimated these terms, which is the `Estimate` column. So our y-intercept ($\beta_{\circ}$) is in the `(Intercept)` row, and equals 3.288e10^7^. Our slope ($\beta_{1}$) is in the `budget` row and equals 1.952. We can interpret this as: "As budget increases by \$1.00, revenue increases by \$1.95". This is cool - for every dollar spent on a horror movie, we can expect it will earn two dollars back!
 
@@ -218,11 +218,11 @@ horror_data %>%
 
 Clearly, there are some relatively low budget movies like "Jaws" and "It" which had huge amounts of revenue. Are these outliers though? Is there any valid reason for us to remove them?
 
-Probably not! For one, we don't think there was a technical error during collection of these data. And if we look at the Residuals vs. Leverage plot, none of our points fall outside of Cook's Distance lines, which would indicate a single point is strongly influencing our model. Sure, that means our model will have a worse R-squared value. But, we want to be realistic, and recognize that of course a linear model will almost never perfectly describe phenomenon in the outside world. 
+Probably not! For one, we don't think there was a technical error during collection of these data. And if we look at the Residuals vs. Leverage plot, none of our points fall outside of Cook's Distance lines, which would indicate a single point is strongly influencing our model. Sure, that means our model will have a worse R-squared value. But, we want to be realistic, and recognize that of course a linear model will almost never perfectly describe phenomenon in the outside world.
 
 #### Trying a transformation:
 
-Our model seems to be suffereing because we're observing heterscedasticity in the variance of revenue across budget. Maybe what we're realizing is that it's possible for low-budget movies to become smash hits, but high-budget movies are constrained - there's only so much money they can recover from a genre movie, and they also can't really flop because of studio support. 
+Our model seems to be suffereing because we're observing heterscedasticity in the variance of revenue across budget. Maybe what we're realizing is that it's possible for low-budget movies to become smash hits, but high-budget movies are constrained - there's only so much money they can recover from a genre movie, and they also can't really flop because of studio support.
 
 There might still be better ways for us to model this data. One method is to **transform** our data, which may help us deal with this heteroscedasticity. Let's look at the distributions of our variables. I'm using a really cool library called ggExtra to add histograms of each variable to our ggplot:
 
@@ -263,7 +263,7 @@ hist(log_lm$residuals)
 
 ```
 
-Our residuals look a little more normal. 
+Our residuals look a little more normal.
 
 ```{r}
 plot(log_lm)
@@ -295,12 +295,11 @@ horror_data %>%
 
 #### Summary
 
-In today's lesson, we learned how to construct a linear model in R, understand R's linear model output, and assess the quality of our linear model. We've learned there's not a single one thing that makes a model "good", and we should use our knowledge of the problem and our common sense when interpreting our results. 
-
+In today's lesson, we learned how to construct a linear model in R, understand R's linear model output, and assess the quality of our linear model. We've learned there's not a single one thing that makes a model "good", and we should use our knowledge of the problem and our common sense when interpreting our results.
 
 #### Bonus: Adding linear models to ggplots "on-the-fly"
 
-As good statisticians, we always read the entire output from our linear models and look at the diagnotic plots to assess the quality of our models, right? But maybe sometimes, rarely, we just want to slap a line onto a ggplot and call it good. There are a few ways to do this. 
+As good statisticians, we always read the entire output from our linear models and look at the diagnotic plots to assess the quality of our models, right? But maybe sometimes, rarely, we just want to slap a line onto a ggplot and call it good. There are a few ways to do this.
 
 The first way uses the geom_smooth() function from ggplot2:
 
@@ -321,7 +320,6 @@ horror_data %>%
   geom_smooth(method = "lm", se = FALSE, color = "grey30")
 
 ```
-
 
 Sometimes, we also want to see information from our model like the coefficients and the R-squared (Excel makes this very easy). We could either pull those data out of our linear model and "annotate" them onto our graph manually, or use functions in the ggpubr library to do it automatically:
 
@@ -375,4 +373,4 @@ summary(bc_lm)
 plot(bc_lm)
 ```
 
-The Q-Q plot looks the best we've seen, so we have in fact transformed towards more normal residuals. But we still have a worse R-squared than our original model! We would need to think critically about what's more important in our research context to decide the best model. We could also look at other quality metrics, like RMSE, to help us decide. 
+The Q-Q plot looks the best we've seen, so we have in fact transformed towards more normal residuals. But we still have a worse R-squared than our original model! We would need to think critically about what's more important in our research context to decide the best model. We could also look at other quality metrics, like RMSE, to help us decide.

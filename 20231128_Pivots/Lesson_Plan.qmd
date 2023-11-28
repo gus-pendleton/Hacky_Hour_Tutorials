@@ -1,0 +1,191 @@
+---
+title: "Hacky Hour 20231128 - Pivots with tidyr"
+format: pdf
+editor: visual
+indent: true
+linestretch: 1.5
+execute:
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+## Goal of Today: Converting data between LONG and WIDE format
+
+Often, we as humans like to enter our data in wide format. For many statistical tests and visualizations in R, however, our data needs to be in long format. As such we need to perform an operation called a "pivot" in order to reshape our data. There are many ways to do this in R:
+
+1.  The `reshape` package (e.g. `melt()`) was popular, but is declining in its use
+2.  The old `tidyverse` functions of `gather` and `spread`
+3.  The new `tidyverse` operations `pivot_longer` and `pivot_wider`.
+
+Let's read in our data and look at it's format.
+
+```{r read in data}
+library(tidyverse)
+
+growth_data <- read_csv("data/growth_data.csv")
+
+growth_data
+```
+
+This is data from a growth curve I ran in a well plate. I ran it for 10 hours, and each well has it's own column where I recorded the OD. This growth curve included three strains, which I did in triplicate. Below is where each strain was in the well plate:
+
+|     | 1   | 2     | 3     |
+|-----|-----|-------|-------|
+| A   | WT  | gene1 | gene2 |
+| B   | WT  | gene1 | gene2 |
+| C   | WT  | gene1 | gene2 |
+
+What happens if we try to plot this?
+
+```{r plotting wide data}
+growth_data %>%
+  ggplot(aes(x = Time, y = A1)) + 
+  geom_line()
+```
+
+Okay, it's easy to plot one of the strains...
+
+But how do I plot all of them?
+
+```{r trying some options}
+
+# This didn't work
+growth_data %>%
+  ggplot(aes(x = Time, y = A1:C3)) + 
+  geom_line()
+
+# Nope
+growth_data %>%
+  ggplot(aes(x = Time, y = !Time)) + 
+  geom_line()
+
+# Yes, but wow it's annoying
+
+growth_data %>%
+  ggplot(aes(x = Time)) + 
+  geom_line(aes(y = A1)) +
+  geom_line(aes(y = A2)) +
+  geom_line(aes(y = A3)) + 
+  geom_line(aes(y = B1)) +
+  geom_line(aes(y = B2)) +
+  geom_line(aes(y = B3)) + 
+  geom_line(aes(y = C1)) +
+  geom_line(aes(y = C2)) +
+  geom_line(aes(y = C3))
+```
+
+Clearly, there needs to be a better way. Ggplot want's it data to be in long format, where we'll have one column with all of the "y's" (which is OD), and another column which separates them into groups (like Well). Let's perform a pivot and then discuss what we did:
+
+```{r pivoting to long}
+long_data <- growth_data %>%
+  pivot_longer(cols = c(A1, A2, A3, B1, B2, B3, C1, C2, C3), 
+               names_to = "Well", values_to = "OD")
+
+# We can do this even easier, by using the `!` symbol to select everything BUT Time
+
+long_data <- growth_data %>%
+  pivot_longer(cols = !Time, names_to = "Well", values_to = "OD")
+
+long_data
+```
+
+Wow - our data is much longer! Now let's see how we plot that in ggplot:
+
+```{r plot long data}
+
+long_data %>%
+  ggplot(aes(x = Time, y = OD, group = Well)) + 
+  geom_line()
+```
+
+Much better, and much easier!
+
+Hmmm, we're interesting in calculating the average of strain at each timepoint, so we need to figure out how to tell R what strain matches which well. There are actually lots of ways to do this; I'll demonstrate three below:
+
+```{r}
+# Using case_whens and writing out all the wells
+
+long_data %>%
+  mutate(Strain = case_when(Well %in% c("A1", "B1", "C1") ~ "WT",
+                            Well %in% c("A2", "B2", "C2") ~ "saeS",
+                            Well %in% c("A3", "B3", "C3") ~ "lpdA"))
+
+# Making a "dictionary" that you then use to join:
+
+well_dict <- data.frame(Well = c("A1","B1","C1","A2","B2","C2","A3","B3","C3"),
+                        Strain = rep(c("WT","saeS","lpdA"),3))
+well_dict
+
+long_data %>%
+  inner_join(well_dict)
+
+# Looking for patterns (WT starts with A) with str_detect
+
+long_data %>%
+  mutate(Strain = case_when(str_detect(Well, "1") ~ "WT",
+                            str_detect(Well, "2") ~ "saeS",
+                            str_detect(Well, "3") ~ "lpdA"))
+
+```
+
+This is entirely up to you. If I'm doing many samples/combinations, I will usually use the joining method, and write out my well dictionary in Excel beforehand.
+
+Let's go ahead and use the first optionto assign strains, and then calculate averages for each strain and each timepoint
+
+```{r now grouping by strain}
+strain_data <- long_data %>%
+  mutate(Strain = case_when(Well %in% c("A1", "B1", "C1") ~ "WT",
+                            Well %in% c("A2", "B2", "C2") ~ "saeS",
+                            Well %in% c("A3", "B3", "C3") ~ "lpdA"))
+
+summarized_data <- strain_data %>%
+ group_by(Time, Strain) %>%
+  summarize(mean_OD = mean(OD),
+            sd_OD = sd(OD))
+
+summarized_data
+```
+
+Great! Now we can plot:
+
+```{r plotting our final plot}
+summarized_data %>%
+  ggplot(aes(x = Time, y = mean_OD, group = Strain, color = Strain)) + 
+  geom_line() + 
+  geom_errorbar(aes(ymin = mean_OD - sd_OD, ymax = mean_OD + sd_OD))
+```
+
+Woohoo! Finally, maybe your collaborator wants you to send them the data, but in wide format so they can plot it in excel. We can convert our data back by using the `pivot_wider` function.
+
+```{r pivot_wider}
+strain_data %>%
+  pivot_wider(names_from = Strain, values_from = OD)
+```
+
+Hm, that doesn't look right. What's going on?
+
+It looks like R still has a row for each well at each timepoint, but made new columns for each strain, and so we have NAs for strains that don't match a given well. That's not really pretty. Let's try again, removing the well column first.
+
+```{r pivot_wider no well}
+strain_data %>%
+  select(-Well) %>%
+  pivot_wider(names_from = Strain, values_from = OD)
+```
+
+Oooooooh, ok, we got a lot going on. First, we get a warning, saying that we don't have unique identifiers. This makes sense - each strain has three OD measurements at each timepoint. Because of this, we get a fancy thing call a list column, where cell of the dataframe is holding all three measurements at once. While we can discuss list columns another day (and they can be very useful!), we don't want to today. Let's use both the Strain name and the well name to identify them:
+
+```{r pivot fix names}
+strain_data %>%
+  pivot_wider(names_from = c(Strain, Well), values_from = OD)
+```
+
+R is smart and automatically glued together the strain and well names. We could also do this with our summarized data, where we are getting our values from two separate columns
+
+```{r pivot summarized}
+summarized_data %>%
+  pivot_wider(names_from = Strain, values_from = c(mean_OD, sd_OD))
+```
+
+Great! Enjoy the wonderful world of pivoting :)
