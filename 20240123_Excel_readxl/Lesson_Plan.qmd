@@ -85,7 +85,7 @@ There's a little warning that popped up, saying R assigned new names to the colu
 well_map
 ```
 
-Hmmm. It looks like we have a column called "Well Map Layout:" and then funky named columns called ...2 and ...3, etc. In fact, it looks like our actual table headers are in the first row right now. This is super common, that people will put a descriptive header in the sheet, with the actual data further down. It also looks like I left myself a little note on the right side, which R thinks is a column of data. We can fix these these problems in two ways
+Hmmm. It looks like we have a column called "Well Map Layout:" and then funky named columns called ...2 and ...3, etc. In fact, it looks like our actual table headers are in the first row right now. This is super common, that people will put a descriptive header in the sheet, with the actual data further down. It also looks like I left myself a little note on the right side, which R thinks is a column of data. We can fix these these problems in two ways.
 
 Telling read_excel to skip the first row
 
@@ -151,19 +151,26 @@ summarized <- joined_with_norm_fluor %>%
 
 ## Writing Data to Excel
 
-Perhaps your lab mate, PI, or collaborator just want to see the summarized data, or the long-formatted data for their own analyses. We can write data to excel files using the package `writexl`:
+Perhaps your lab mate, PI, or collaborator just want to see the summarized data, or the long-formatted data for their own analyses. We can write data to excel files using `openxlsx`
 
 ```{r}
-# install.packages("writexl)
+# install.packages("openxlsx")
 
-library(writexl)
+library(openxlsx)
 
-write_xlsx(joined_with_norm_fluor, path = "data/Long_Formatted_Data.xlsx")
+# We can write out individual sheets:
 
-write_xlsx(summarized, path = "data/Summarized_Data.xlsx")
+write.xlsx(joined_with_norm_fluor, file = "data/Long_Formatted_Data.xlsx")
+
+write.xlsx(summarized, file = "data/Summarized_Data.xlsx")
+
+# If we want to write multiple data frames to different sheets
+# in the same workbook, we need to put them in a list first
+sheet_list <- list("Long_Data" = joined_with_norm_fluor,
+                   "Summarized" = summarized)
+write.xlsx(sheet_list, file = "data/Altogether.xlsx")
+
 ```
-
-Apparently you can write multiple data frames to different sheets of the same Excel workbook using the `xlsx` package. However, this requires a separate Java installation and crashes my R session when I attempt to load it (these errors are documented [here](https://github.com/rstudio/rstudio/issues/11076)). Could be something useful in the future though!
 
 ## Plotting Data
 
