@@ -1,0 +1,209 @@
+---
+title: "Defining Functions"
+author: "Augustus Pendleton"
+format: pdf
+editor: visual
+execute-dir: project
+indent: true
+linestretch: 1.5
+execute:
+  warning: false
+  message: false
+  error: true
+editor_options: 
+  chunk_output_type: console
+---
+
+## Why write functions in R?
+
+As biologists, writing functions seems like computer science-cy stuff that we don't need to touch. However, writing functions can make our code more readable, more reproducible, and altogether more flexible. There are also times in R where defining a function is required for specific analyses or tasks. Luckily, writing functions in R is fairly approachable. Let's go ahead and define our first functions.
+
+## Functions describe *what to do* to a specified *argument* 
+
+A function is like a recipe we wrote, which takes defined ingredients, performs some task on them, and returns an output. We call these ingredients **arguments**. Below, I demonstrate the standard syntax for defining a function:
+
+```{r times_two_def}
+times_two <- function(x){
+  x * 2
+}
+```
+
+Now, we've defined a function called `times_two`. Defining a function is the same as with any object in R - we use the assignment operator `<-`. Next, we use the (function) `function`, and in parentheses, we define the *arguments* that function takes. In this case, the function takes 1 argument, called x. Finally, in curly brackets, we define what the function *does* to its argument. In this case, it takes x, and multiplies it by two. We can see this happen below
+
+```{r times_two_use}
+times_two(2)
+
+
+times_two(x = 4)
+
+times_two(y = 9)
+```
+
+Note, it's optional whether we specify the name of the argument when we call the function (`x=4`); if we don't, R assumes we are referring to x. However, if we explicitly refer to an argument that that function doesn't know (`y`), we will get an error.
+
+Functions can be defined with as many arguments as you want:
+
+```{r divide_def}
+
+divide <- function(number1, number2){
+  number1 / number2
+}
+
+```
+
+Now I've defined a function call `divide`, which takes two arguments (`number1` and `number2`) and divides `number1` by `number2`. We can check that it does this:
+
+```{r divide}
+divide(12,3)
+
+divide(20,4)
+
+divide(4, 20)
+```
+
+By default, R assumes you provide arguments in the same order you defined them. We can provide arguments in a different order by using their names:
+
+```{r divide_order}
+divide(number2 = 3, number1 = 12)
+```
+
+## When is defining a function useful?
+
+Okay, at this point, I hope you are as delighted as I am about how fun it is to define your own functions. However, the above examples might feel a little silly - the functions for adding or dividing numbers are already defined in R - why would we ever define our own? Generally, it's helpful to define our own functions for specific tasks that are relevant to us, but that we need to do multiple times. Let's work through an example, to see what I'm talking about.
+
+## Analyzing multiple Taylor Swift datasets
+
+In our data folder, we have multiple csv sheets, each corresponding to a Taylor Swift album. Let's take a look at some of these files.
+
+```{r exploring-data}
+list.files("data")
+
+read.csv("data/evermore.csv")
+
+read.csv("data/x1989.csv")
+```
+
+It looks like our files all have the same data in them. Our goal is to find the longest song on every album. I might do it using code that looks like this:
+
+```{r find-longest-song}
+evermore_data <- read.csv("data/evermore.csv") # Read in data
+
+durations <- evermore_data[["duration_ms"]] # Get durations as a vector
+
+index_of_longest <- which.max(durations) # Find the index of the largest duration
+
+evermore_data$track_name[index_of_longest] # Select the corresponding track name
+```
+
+Then, if I wanted to do this for each album, I could copy and paste that code 13 times, changing "evermore" to each album name in every one.
+
+What are the downsides to this? I would have a very long script with many repetitions. This makes the chance of typos much higher, and makes troubleshooting code more difficult. Also, if I decide I want to change something (perhaps find the shortest song instead of the longest), I need to change that 13 times!
+
+We can simplify this process using by defining a function that does these tasks for us.
+
+```{r define-taylor-function}
+longest_song <- function(album_path){
+  album_data <- read.csv(album_path) # Read in data
+
+  durations <- album_data[["duration_ms"]] # Get durations as a vector
+
+  index_of_longest <- which.max(durations) # Find the index of the largest duration
+
+  longest_song <- album_data$track_name[index_of_longest] # Select the corresponding track name
+  
+  return(longest_song)
+  
+}
+```
+
+Notice that now I also used a function called `return` to define exactly which value the function should output. By default, a function in R will just return whatever was the last value called in the function. However, it is good practice to be explicit about what the function outputs. Let's use ouf function now
+
+```{r use-taylor-function}
+longest_song("data/evermore.csv")
+longest_song("data/red.csv")
+longest_song("data/x1989.csv")
+```
+
+Wow - much nice! We've taken what would have been 12 lines of repetitive code and reduced it to 3. This is already a huge improvement. While not the focus of today's lesson, defining functions becomes especially useful when we combine them with iterative functions like `map`, which apply a function across a list of values. I demonstrate this below:
+
+```{r using-map}
+files <- list.files("data", full.names = TRUE)
+
+purrr::map_chr(files, longest_song)
+```
+
+This automatically applied our `longest_song` function to all thirteen data files that we have. Now, the process of reading in each file and calculating the longest song has been reduced from \~53 lines of code to just 2.
+
+## Functions help make us more flexible
+
+THe other benefit of a function is that you can make it more flexible, so that you can use it for multiple different tasks. Below, I re-write our `longest_song` function so that I can find the song with the maximum over any variable in the dataset (e.g. the most loud, the most long).
+
+```{r most_x_song}
+most_x_song <- function(album_path, var_of_interest){
+  album_data <- read.csv(album_path) # Read in data
+
+  values <- album_data[[var_of_interest]] # Get durations as a vector
+
+  index_of_most <- which.max(values) # Find the index of the largest duration
+
+  most_song <- album_data$track_name[index_of_most] # Select the corresponding track name
+  
+  return(most_song)
+  
+}
+```
+
+Now, I can find the loudest, longest, or most danceable song for each album
+
+```{r using-most_x_song}
+most_x_song("data/evermore.csv", "loudness")
+most_x_song("data/evermore.csv", "tempo")
+```
+
+We can similarly use map functions to quickly apply this function across all of our files.
+
+```{r most_map}
+purrr::map_chr(files, most_x_song, var_of_interest = "loudness")
+
+purrr::map_chr(files, most_x_song, var_of_interest = "energy")
+```
+
+## Anonymous Functions
+
+The last thing we'll cover today is the concept of anonymous functions. These are, as the name implies, functions that don't have a name - they are anonymous. I use anonymous functions a LOT, and typically in two places:
+
+-   Inside of map, to define a new function
+
+-   When using ggplot, to calculate a summary statistic
+
+We'll use the evermore data to discuss the second point. First, let's load ggplot and make an example plot:
+
+```{r first-plot}
+library(ggplot2)
+
+ggplot(data = evermore_data, aes(x = 1, y = duration_ms)) + 
+  geom_point()
+```
+
+Here, each point is a song, and on the y axis, we have its duration. I think it would be helpful to add a larger point, representing the mean duration. We can do this with a function call `stat_summary`
+
+```{r stat_summary}
+ggplot(data = evermore_data, aes(x = 1, y = duration_ms)) + 
+  geom_point() + 
+  stat_summary(geom = "point", fun = mean, size = 4)
+```
+
+In stat_summary we provided a function (`fun`) called `mean` to calculate the position of our new geom (`point`). I also change the size so that we can notice that it's the mean. All good - but what if we want to add error bars? We can again use stat_summary, but this time we'll define a function *within it* that calculates the upper and lower bounds of the errorbar
+
+```{r stat_summary_error}
+ggplot(data = evermore_data, aes(x = 1, y = duration_ms)) + 
+  geom_point() + 
+  stat_summary(geom = "point", fun = mean, size = 4) + 
+  stat_summary(geom = "errorbar", width = 0.2,
+               fun.min = function(x)mean(x) - sd(x),
+               fun.max = function(x)mean(x) + sd(x))
+```
+
+Here, we define a function which takes the mean of the points and either subtracts or adds the standard deviation of the points. We could define this function outside and give it a name (something like `upper_error` and `lower_error` and pass that to stat_summary instead. However, since we're just using it here, we provide a function without giving it a name - hence, an anonymous function.
+
+While it may seem silly off the bat, anonymous functions are very popular, and as you google questions and use others code, you'll keep running into them. As such, it's worth while to understand what they're doing.
