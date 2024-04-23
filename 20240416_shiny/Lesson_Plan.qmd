@@ -1,0 +1,15 @@
+---
+title: "Making Interactive Apps with Shiny"
+author: "Augustus Pendleton"
+format: pdf
+editor: visual
+execute-dir: project
+indent: true
+linestretch: 1.5
+execute:
+  warning: false
+  message: false
+  error: true
+editor_options: 
+  chunk_output_type: console
+---

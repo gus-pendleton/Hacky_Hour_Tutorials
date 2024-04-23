@@ -1,0 +1,187 @@
+---
+title: "Reading Excel Sheets using readxl"
+author: "Augustus Pendleton"
+format: pdf
+editor: visual
+indent: true
+linestretch: 1.5
+execute:
+  warning: false
+  message: false
+editor_options: 
+  chunk_output_type: console
+---
+
+## Goal for Today: Reading in Data from Excel Sheets
+
+Even though I'm a die-hard R fan, I also LOVE Excel. I like to collect all my data in Excel sheets, and most collaborators will ask for data as Excel files. Excel is also handy for auto-filling repreated values or sequences. However, base R cannot naturally read in data from Excel. As such, we have two options:
+
+1.  Export our Excel sheets as .csv or .tsv files
+2.  Use the `readxl` package to read directly from Excel sheets.
+
+For extremely large datasets and exports, it might make sense to save data as machine-readable delimited files (like csv, tsv, or txt), because they are much more compact and can be easily read across most coding languages.
+
+However, for most lab work, I prefer to keep my data as excel sheets only. This way, when I add new data, I don't need to re-export the sheet every time. There have been many times where I have forgotten to export my files, and don't realize that I was reading in out-dated data into R. Finally, I can keep multiple sheets in an Excel file, potentially helping me stay more organized.
+
+## Our Data
+
+In the data/ directory, I have an Excel file with three sheets. In this experiment, I measured grew wild-type (WT) and a mutant (Mut) for 10 hours in two types of media (LB and Minimal media). They each had a fluorescent reporter. At three time points, I measured their fluorescence and optical density (OD) in a well-plate.
+
+## What sheets are in our Excel file?
+
+First, we need to load the readxl package
+
+```{r}
+# If you haven't installed it, we need to run this line first
+# install.packages("readxl")
+library(readxl)
+```
+
+Now, we know that our file has multiple sheets within it. We can see which sheets are in the file using the `excel_sheets` function
+
+```{r}
+excel_sheets("data/Fluor_assay.xlsx")
+```
+
+This tells us that we have three sheets, named Fluor_Results, OD_Results, and Well Map.
+
+## Reading in data
+
+We will read in data from our Excel sheets using the `read_excel` function. By default, it will read in the first sheet in the workbook.
+
+```{r}
+read_excel("data/Fluor_Assay.xlsx")
+```
+
+If we want to read in a specific sheet, we can specify it by name
+
+```{r}
+read_excel("data/Fluor_Assay.xlsx", sheet = "OD_Results")
+```
+
+Or number
+
+```{r}
+read_excel("data/Fluor_Assay.xlsx", sheet = 2)
+```
+
+Why might reading in by name be a better idea than by number?
+
+## Reading and Saving as an Object
+
+If you look at our "Environment" pane on the right, you'll notice that it's empty. This is because we haven't stored the data we're reading in as an object yet. Let's do that for our three sheets.
+
+```{r}
+fluor_df <- read_excel("data/Fluor_Assay.xlsx", sheet = "Fluor_Results")
+
+od_df <- read_excel("data/Fluor_Assay.xlsx", sheet = "OD_Results")
+
+well_map <- read_excel("data/Fluor_Assay.xlsx", sheet = "Well Map")
+```
+
+There's a little warning that popped up, saying R assigned new names to the columns of our well map. Maybe we should take a look at that.
+
+```{r}
+well_map
+```
+
+Hmmm. It looks like we have a column called "Well Map Layout:" and then funky named columns called ...2 and ...3, etc. In fact, it looks like our actual table headers are in the first row right now. This is super common, that people will put a descriptive header in the sheet, with the actual data further down. It also looks like I left myself a little note on the right side, which R thinks is a column of data. We can fix these these problems in two ways.
+
+Telling read_excel to skip the first row
+
+```{r}
+read_excel("data/Fluor_Assay.xlsx", sheet = "Well Map", skip = 1)
+```
+
+Now our column headers are right. We can also tell it which range to actually read in
+
+```{r}
+read_excel("data/Fluor_Assay.xlsx", sheet = "Well Map", skip = 1, range = "A1:C18")
+```
+
+But be-warned: this will over-ride our skip argument. So we could instead do
+
+```{r}
+read_excel("data/Fluor_Assay.xlsx", sheet = "Well Map", range = "A2:C18")
+```
+
+In fact, if you're comfortable with Excel ranges, you can also use them to specify the sheet
+
+```{r}
+read_excel("data/Fluor_Assay.xlsx", range = "Well Map!A2:C18")
+```
+
+That looks good! Let's save it
+
+```{r}
+well_map <- read_excel("data/Fluor_Assay.xlsx", sheet = "Well Map", range = "A2:C18")
+```
+
+## Other Arguments
+
+There are lots of other arguments we can pass to read_excel, that I won't really get into today. We can specify `col_names` and `col_types` to manually dictate what the header names and data types (like numerical or character) we want each column to be. `read_excel` automatically trims whitespace (like spaces and tabs) from the beginning and ends of data cells; you can turn this off with the `trim_ws` argument. If your file is absolutely huge, you can limit how many rows to read in using the `n_max` argument.
+
+## Cleaning and Analyzing Our Data
+
+Now that we have our data in R, we can use our coding skills to rapidly (and reproducibly) clean, combine, and plot our data. Below, I'm going to convert my data frames to long format, use joins to combine them with the strain and media information, summarized them, and plot them. I will use functions from the `tidyverse` packages.
+
+```{r}
+library(tidyverse) # Load tidyverse packages
+
+# Pivot our fluorescence data to long format
+long_fluor <- fluor_df %>%
+  pivot_longer(cols = !Time, names_to = "Well", values_to = "Fluorescence") # All columns that are NOT Time
+
+long_od <- od_df %>%
+  pivot_longer(cols = !Time, names_to = "Well", values_to = "OD") # All columns that are NOT Time
+
+joined <- well_map %>%
+  inner_join(long_fluor, by = "Well") %>% # Join our fluorescence data based on Well
+  inner_join(long_od, by = c("Well", "Time")) # Join our od data based on Well and Time
+
+
+joined_with_norm_fluor <- joined %>%
+  mutate(Normalized_Fluorescence = Fluorescence / OD) # Create a new column of Fluorescence divided by OD
+
+summarized <- joined_with_norm_fluor %>%
+  group_by(Time, Strain, Media) %>% # Group by Time, Strain, and Media
+  summarize(Avg_Norm_Fluor = mean(Normalized_Fluorescence), # Calculate average normalized fluorescence
+            Sd_Norm_Fluor = sd(Normalized_Fluorescence)) # Calculate standard deviation
+```
+
+## Writing Data to Excel
+
+Perhaps your lab mate, PI, or collaborator just want to see the summarized data, or the long-formatted data for their own analyses. We can write data to excel files using `openxlsx`
+
+```{r}
+# install.packages("openxlsx")
+
+library(openxlsx)
+
+# We can write out individual sheets:
+
+write.xlsx(joined_with_norm_fluor, file = "data/Long_Formatted_Data.xlsx")
+
+write.xlsx(summarized, file = "data/Summarized_Data.xlsx")
+
+# If we want to write multiple data frames to different sheets
+# in the same workbook, we need to put them in a list first
+sheet_list <- list("Long_Data" = joined_with_norm_fluor,
+                   "Summarized" = summarized)
+write.xlsx(sheet_list, file = "data/Altogether.xlsx")
+
+```
+
+## Plotting Data
+
+We did all that work to make some beautiful data! Let's plot it to finish the lesson out :)
+
+```{r}
+summarized %>%
+  ggplot(aes(x = Time, y = Avg_Norm_Fluor, color = Strain)) +
+  geom_line() + 
+  geom_point() +
+  facet_wrap(~Media) + 
+  labs(x = "Time (hrs)", y = "OD-Normalized Fluorescence") + 
+  theme_classic()
+```
