@@ -26,7 +26,7 @@ library(tidyverse)
 
 ## Read in the data
 
-First, let's read in the data. 
+First, let's read in the data.
 
 ```{r read-data}
 phylum_counts <- read_csv("data/phylum_counts.csv")
@@ -34,8 +34,7 @@ phylum_counts <- read_csv("data/phylum_counts.csv")
 head(phylum_counts)
 ```
 
-
-These are absolute counts of amplicon sequence variants (ASVs) summed by Phylum, measured in Lake Ontario at two times (May vs September) and at two depths (Deep vs Shallow). The data is also in what we call a "wide" format - the values in one of our variables (Depth/Month group) are spread out across multiple columns as column names. While this format is often preferred when entering data, we'll need to convert our data to "long" format in order to use ggplot. 
+These are absolute counts of amplicon sequence variants (ASVs) summed by Phylum, measured in Lake Ontario at two times (May vs September) and at two depths (Deep vs Shallow). The data is also in what we call a "wide" format - the values in one of our variables (Depth/Month group) are spread out across multiple columns as column names. While this format is often preferred when entering data, we'll need to convert our data to "long" format in order to use ggplot.
 
 ```{r wide-to-long}
 long_counts <- pivot_longer(phylum_counts, 
@@ -46,7 +45,7 @@ long_counts <- pivot_longer(phylum_counts,
 head(long_counts)
 ```
 
-That's looking much better! Phylum and Depth_and_Month will be our two axes that define the grid of our heatmap, and Counts will be the variable that we map to the color in our heatmap. 
+That's looking much better! Phylum and Depth_and_Month will be our two axes that define the grid of our heatmap, and Counts will be the variable that we map to the color in our heatmap.
 
 ## Make our first heatmap
 
@@ -60,7 +59,7 @@ long_counts %>%
 
 ```
 
-That's a good start! Lighted areas have higher counts compared to darker areas. Personally, I do not love this palette - I think it is harder to see contrast. Let's adjust which colors we fill in. 
+That's a good start! Lighted areas have higher counts compared to darker areas. Personally, I do not love this palette - I think it is harder to see contrast. Let's adjust which colors we fill in.
 
 ```{r second-heatmap, fig.width = 8, fig.height=4}
 
@@ -100,18 +99,17 @@ long_counts %>%
 
 ```
 
-That looks pretty good! But wait... our goal is to look for patterns and groupings. We can start to figure out some of the main findings by slowly scanning row by row, but it's hard to seem immediate patterns between groupings. 
+That looks pretty good! But wait... our goal is to look for patterns and groupings. We can start to figure out some of the main findings by slowly scanning row by row, but it's hard to seem immediate patterns between groupings.
 
-One of the best things we can do to make our heat maps more approachable is to cluster or arrange our rows and columns so that more similar (rows) and more similar (columns) are next to each other. Obviously, there are caveats here - if one axis is ordinal (like time, or dosage) you'll probably avoid scrambling the rows. For our data, however, I'd like to maximize keeping similar groups together. 
+One of the best things we can do to make our heat maps more approachable is to cluster or arrange our rows and columns so that more similar (rows) and more similar (columns) are next to each other. Obviously, there are caveats here - if one axis is ordinal (like time, or dosage) you'll probably avoid scrambling the rows. For our data, however, I'd like to maximize keeping similar groups together.
 
-There are a few ways we can do this. `pheatmap` is another plotting library you can check out, which can do this automatically. Or, you can do it by hand. In today's lesson, we'll split the difference. We'll use a function that Gus wrote which helps us rearrange those columns. To load this function, we'll use a `source` command. 
+There are a few ways we can do this. `pheatmap` is another plotting library you can check out, which can do this automatically. Or, you can do it by hand. In today's lesson, we'll split the difference. We'll use a function that Gus wrote which helps us rearrange those columns. To load this function, we'll use a `source` command.
 
 ```{r load-rearrange-function}
 
 source("data/reorder_variable_by_clustering.R")
 
 ```
-
 
 Now, we'll use the function to first rearrange the Phylum, and then to rearrange the Depth and Month, and then we'll pass that into ggplot.[^1]
 
@@ -132,4 +130,64 @@ long_counts %>%
 
 ```
 
-That's looking much better! 
+That's looking much better!
+
+## Bonus: Add the dendrogram to your plot
+
+```{r heatmap-with-dendrogram, fig.width = 9, fig.height=5}
+
+library(patchwork)
+library(ggdendro)
+
+
+phy_res <- long_counts %>%
+  reorder_variable_by_clustering("Phylum",
+                                 "Depth_and_Month",
+                                 "Counts", 
+                                 return_dendro = TRUE)
+
+phy_dendro <- ggdendrogram(phy_res$dendrogram,
+             labels = FALSE,
+             leaf_labels = FALSE,
+             rotate = TRUE) +
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank()) + 
+  scale_y_reverse() + 
+  theme_dendro()
+  
+d_and_m_res <- phy_res$reord_df %>%
+  reorder_variable_by_clustering("Depth_and_Month",
+                                 "Phylum",
+                                 "Counts", 
+                                 return_dendro = TRUE)
+  
+d_and_m_dendro <- ggdendrogram(d_and_m_res$dendrogram,
+             labels = FALSE,
+             leaf_labels = FALSE) + 
+  theme(axis.text.x = element_blank(),
+        axis.text.y = element_blank()) + 
+  scale_y_reverse() + 
+  theme_dendro()
+
+heatmap <- d_and_m_res$reord_df %>%
+  ggplot(aes(x = Depth_and_Month, y = Phylum, fill = Counts)) + 
+  geom_tile() + 
+  scale_fill_viridis_c(option = "inferno", 
+                       transform = "log10",
+                       na.value = "black") + 
+  theme_minimal() + 
+  theme(axis.title.y = element_blank(),
+        axis.title.x = element_blank(),
+        plot.margin = margin(0,0,0,0,"pt"))
+
+
+p1 <- (phy_dendro + heatmap)  + 
+  plot_layout(widths = c(1,20))
+
+p2 <- plot_spacer() +  d_and_m_dendro + plot_spacer() +
+  plot_layout(widths = c(1,2,.25))
+
+
+p1 / p2 + 
+  plot_layout(heights = c(10,1))
+```
