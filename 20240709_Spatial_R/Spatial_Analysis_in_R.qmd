@@ -1,0 +1,147 @@
+---
+title: "Spatial Analysis Day One"
+author: Augustus Pendleton
+format: revealjs
+editor: visual
+---
+
+# Spatial Analysis
+
+## Spatial analysis is more common than you expect!
+
+::: incremental
+-   Environmental microbiology
+-   Epidemiology
+-   Microscopy images
+:::
+
+## Spatial analysis is fun! {.scrollable}
+
+::: {layout="[[1,1],[1,1]]"}
+::: {#bathymetry}
+![](images/bathymetry-1.png)
+:::
+
+::: {#chloropleth}
+![](images/bubbler_map.jpeg)
+:::
+
+::: {#birdmigrations}
+![](images/bird_migrations.jpg)
+:::
+
+::: {#buckley}
+![](images/buckley.png)
+:::
+:::
+
+## Spatial analysis is also *difficult*
+
+-   Irregular shapes on an uneven surface
+
+-   Historical or technical inaccuracies
+
+-   Computationally demanding
+
+## Spatial analysis is rarely reproducible
+
+-   Most popular software (ArcGIS, QGIS) are semi-reproducible
+-   Analyses are rarely shared
+-   Authors often make un-annotated transformations
+
+# Types of Spatial Data
+
+## Vector vs. Raster Data {.smaller}
+
+:::: {columns}
+::: {.column width="45%"}
+
+Vectors have discrete coordinates or borders
+![](images/powerplants.png)
+:::
+
+::: {.column width="45%}
+
+Rasters are continuous
+![](images/mercury_deposition.png)
+
+::: 
+::::
+
+## Vector Data: Points, Lines, and Polygon
+
+- Point: Defined by single (x,y) coordinates
+- Line: Defined by multiple (ordered) coordinates
+- Polygon: Defined by multiple coordinates which form a **closed shape**
+
+## Vector Data: Geometries, Attributes, and Multi-Geometries
+
+- A vector's points are defined by its **geometry**
+- An attribute table provides additional information
+  - Names or IDs (e.g. "Station 02", "Arizona")
+  - Measurements (e.g. "Temperature")
+- *Multi*-points/liens/polygons have multiple geometries with a single attribute record
+  - For instance, Michigan has a geometry for the mainland and the Upper Peninsula
+  
+## Vector Data Filetypes
+
+- Delimited files (.csvs, .txts, .xlsx, etc.)
+- Shapefiles (.shp with many files in a trenchcoat)
+- GeoJSON/JSON (.geojson, .json)
+- Geopackage (.gpkg)
+- Open Street Maps (.xml)
+
+## Raster Data: Continuous data or images
+
+- Defined by an evenly-spaced grid of cells (or pixels)
+- Each cell's "value" represents the average of that cell's area
+- Spatial extent of raster defined by coordinates of grid's corners
+
+## Raster Data Filetypes
+
+- Any image format (.img, .tif) with embedded spatial information
+- Separate files for the raster and the spatial info (e.g. .tif with .tfw)
+- Geopackages (.gpkg)
+
+# Coordinate Systems
+
+## How do we define a coordinate?
+
+- The Earth is spherical
+- To define global position we use *angular coordinates*
+- On smaller scales, we often use *planar (projected) coordinates*
+
+## Angular/Geographic Coordinates
+
+::: incremental
+- Latitude (angle from equator)
+- Longitude (angle from primer meridian)
+- Can be defined as degrees, minutes, and seconds (e.g. 40° 31' 21" North by 105° 5' 39" West)
+- Or decimal degrees (40.866389°, -124.082778°)
+- North and East are positive, South and West or negative
+- If you can, please record your data in decimal degrees
+
+:::
+
+## Datums
+
+- The earth isn't perfectly symmetrical
+- A datum is a 3D model of the Earth we use for angular coordinates
+- WGS84 is most popular (most GPS will give you coordinates based on this datum)
+- You may also see NAD83 for older data
+- There are other, more accurate datums for specific regions; so far I haven't needed them
+
+## Projected Coordinate Systems
+
+- Maps are 2D; the Earth is 3D
+- We need to *project* angular coordinates to planar (cartesian) coordinates
+- Projections **always** cause distortions
+- We should try to choose the best projection for our map area
+![](images/mercator-true-size.jpg)
+
+## Bad projections
+
+
+## Coordinate Reference Systems
+
+- 
