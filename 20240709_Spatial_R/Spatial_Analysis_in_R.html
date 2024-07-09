@@ -11,7 +11,7 @@
   <meta name="generator" content="quarto-1.3.433">
 
   <meta name="author" content="Augustus Pendleton">
-  <title>Spatial Analysis Day One</title>
+  <title>Spatial Analysis: An Introduction</title>
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, minimal-ui">
@@ -325,7 +325,7 @@
     <div class="slides">
 
 <section id="title-slide" class="quarto-title-block center">
-  <h1 class="title">Spatial Analysis Day One</h1>
+  <h1 class="title">Spatial Analysis:<br>An Introduction</h1>
 
 <div class="quarto-title-authors">
 <div class="quarto-title-author">
@@ -334,11 +334,6 @@ Augustus Pendleton
 </div>
 </div>
 </div>
-
-</section>
-<section>
-<section id="spatial-analysis" class="title-slide slide level1 center">
-<h1>Spatial Analysis</h1>
 
 </section>
 <section id="spatial-analysis-is-more-common-than-you-expect" class="slide level2">
@@ -387,7 +382,7 @@ Augustus Pendleton
 <li>Analyses are rarely shared</li>
 <li>Authors often make un-annotated transformations</li>
 </ul>
-</section></section>
+</section>
 <section>
 <section id="types-of-spatial-data" class="title-slide slide level1 center">
 <h1>Types of Spatial Data</h1>
@@ -396,11 +391,12 @@ Augustus Pendleton
 <section id="vector-vs.-raster-data" class="slide level2 smaller">
 <h2>Vector vs.&nbsp;Raster Data</h2>
 <div class="{columns}">
-<div class="column" style="width:45%;">
-<p>Vectors have discrete coordinates or borders <img data-src="images/powerplants.png"></p>
+<div class="column fragment" style="width:45%;">
+<p>Vectors have discrete coordinates <br> Example: Coal Fired Powerplants</p>
+<p><img data-src="images/powerplants.png"></p>
 </div>
-<div class="column" style="width:&quot;45%;">
-<p>Rasters are continuous <img data-src="images/mercury_deposition.png"></p>
+<div class="column fragment" style="width:45%;">
+<p>Rasters are continuous <br> Example: Mercury Deposition Rates<br> <br> <img data-src="images/mercury_deposition.png"></p>
 </div>
 </div>
 </section>
@@ -412,33 +408,35 @@ Augustus Pendleton
 <li>Polygon: Defined by multiple coordinates which form a <strong>closed shape</strong></li>
 </ul>
 </section>
-<section id="vector-data-geometries-attributes-and-multi-geometries" class="slide level2">
-<h2>Vector Data: Geometries, Attributes, and Multi-Geometries</h2>
+<section id="vector-data-geometries-and-attributes" class="slide level2">
+<h2>Vector Data: Geometries and Attributes</h2>
+<div>
 <ul>
-<li>A vector’s points are defined by its <strong>geometry</strong></li>
-<li>An attribute table provides additional information
+<li class="fragment">A vector’s points are defined by its <strong>geometry</strong></li>
+<li class="fragment">An attribute table provides additional information
 <ul>
-<li>Names or IDs (e.g.&nbsp;“Station 02”, “Arizona”)</li>
-<li>Measurements (e.g.&nbsp;“Temperature”)</li>
+<li class="fragment">Names or IDs (e.g.&nbsp;“Station 02”, “Arizona”)</li>
+<li class="fragment">Measurements (e.g.&nbsp;“Temperature”)</li>
 </ul></li>
-<li><em>Multi</em>-points/liens/polygons have multiple geometries with a single attribute record
+<li class="fragment"><em>Multi</em>-points/lines/polygons have multiple geometries with a single attribute record
 <ul>
-<li>For instance, Michigan has a geometry for the mainland and the Upper Peninsula</li>
+<li class="fragment">For instance, Michigan has a geometry for the mainland and the Upper Peninsula</li>
 </ul></li>
 </ul>
+</div>
 </section>
 <section id="vector-data-filetypes" class="slide level2">
 <h2>Vector Data Filetypes</h2>
 <ul>
 <li>Delimited files (.csvs, .txts, .xlsx, etc.)</li>
 <li>Shapefiles (.shp with many files in a trenchcoat)</li>
-<li>GeoJSON/JSON (.geojson, .json)</li>
 <li>Geopackage (.gpkg)</li>
+<li>GeoJSON/JSON (.geojson, .json)</li>
 <li>Open Street Maps (.xml)</li>
 </ul>
 </section>
-<section id="raster-data-continuous-data-or-images" class="slide level2">
-<h2>Raster Data: Continuous data or images</h2>
+<section id="raster-data-continuous-data-and-images" class="slide level2">
+<h2>Raster Data: Continuous data and images</h2>
 <ul>
 <li>Defined by an evenly-spaced grid of cells (or pixels)</li>
 <li>Each cell’s “value” represents the average of that cell’s area</li>
@@ -463,17 +461,28 @@ Augustus Pendleton
 <ul>
 <li>The Earth is spherical</li>
 <li>To define global position we use <em>angular coordinates</em></li>
-<li>On smaller scales, we often use <em>planar (projected) coordinates</em></li>
+<li>To make maps, we use <em>planar coordinates</em></li>
 </ul>
 </section>
 <section id="angulargeographic-coordinates" class="slide level2">
 <h2>Angular/Geographic Coordinates</h2>
+<ul>
+<li>Latitude (angle from equator)</li>
+<li>Longitude (angle from primer meridian)<br> <img data-src="images/lat_long.webp" style="width:40.0%"></li>
+</ul>
+</section>
+<section id="reporting-angular-coordinates" class="slide level2">
+<h2>Reporting Angular Coordinates</h2>
 <div>
 <ul>
-<li class="fragment">Latitude (angle from equator)</li>
-<li class="fragment">Longitude (angle from primer meridian)</li>
-<li class="fragment">Can be defined as degrees, minutes, and seconds (e.g.&nbsp;40° 31’ 21” North by 105° 5’ 39” West)</li>
-<li class="fragment">Or decimal degrees (40.866389°, -124.082778°)</li>
+<li class="fragment">Degrees, minutes, and seconds
+<ul>
+<li class="fragment">40° 31’ 21” North by 105° 5’ 39” West</li>
+</ul></li>
+<li class="fragment">Decimal degrees
+<ul>
+<li class="fragment">40.866389°, -124.082778°</li>
+</ul></li>
 <li class="fragment">North and East are positive, South and West or negative</li>
 <li class="fragment">If you can, please record your data in decimal degrees</li>
 </ul>
@@ -486,26 +495,145 @@ Augustus Pendleton
 <li>A datum is a 3D model of the Earth we use for angular coordinates</li>
 <li>WGS84 is most popular (most GPS will give you coordinates based on this datum)</li>
 <li>You may also see NAD83 for older data</li>
-<li>There are other, more accurate datums for specific regions; so far I haven’t needed them</li>
+<li>There are other, more accurate datums for specific regions</li>
 </ul>
 </section>
-<section id="projected-coordinate-systems" class="slide level2">
+<section id="projected-coordinate-systems" class="slide level2 scrollable">
 <h2>Projected Coordinate Systems</h2>
 <ul>
 <li>Maps are 2D; the Earth is 3D</li>
 <li>We need to <em>project</em> angular coordinates to planar (cartesian) coordinates</li>
+<li>Project coordinate systems are in x,y coordinates from a defined origin</li>
+<li>Coordinates are in linear units (e.g.&nbsp;meters or miles)</li>
 <li>Projections <strong>always</strong> cause distortions</li>
-<li>We should try to choose the best projection for our map area <img data-src="images/mercator-true-size.jpg"></li>
 </ul>
 </section>
-<section id="bad-projections" class="slide level2">
-<h2>Bad projections</h2>
+<section id="projection-always-causes-distortion" class="slide level2">
+<h2>Projection <strong>always</strong> causes distortion</h2>
+
+<img data-src="images/mercator-true-size.jpg" class="r-stretch"></section>
+<section id="bad-projection-makes-bad-maps" class="slide level2">
+<h2>Bad projection makes bad maps!</h2>
+<div class="{columns}">
+<div class="column fragment" style="width:45%;">
+<p>Good projection <img data-src="images/good_projection.png"></p>
+</div>
+<div class="column fragment" style="width:45%;">
+<p>Inaccurate projection <img data-src="images/really_bad_projection.png"></p>
+</div>
+</div>
 </section>
-<section id="coordinate-reference-systems" class="slide level2">
-<h2>Coordinate Reference Systems</h2>
+<section id="defining-a-coordinate-system" class="slide level2">
+<h2>Defining a Coordinate System</h2>
 <ul>
-<li></li>
+<li>Many spatial datatypes specify their coordinate systems</li>
+<li>If you’re collecting data, you <strong>must</strong> report what CRS/datum you use
+<ul>
+<li>Often, this is WGS84</li>
+</ul></li>
+<li>Historical and governmental data may used specific CRS and datums!</li>
+<li>Sometime you’ll need to tell your software <em>which</em> CRS the data is in</li>
+<li>Sometime you’ll need to project your data to a new CRS</li>
 </ul>
+</section></section>
+<section>
+<section id="spatial-analysis-software" class="title-slide slide level1 center">
+<h1>Spatial Analysis Software</h1>
+
+</section>
+<section id="popular-gis-systems" class="slide level2 smaller">
+<h2>Popular GIS Systems</h2>
+<ul>
+<li>ArcGIS
+<ul>
+<li>Most powerful, popular, and well supported spatial software</li>
+<li>$$$$</li>
+<li>Closed source and often slow</li>
+</ul></li>
+<li>QGIS
+<ul>
+<li>Open-source version of ArcGIS - <strong>great option</strong></li>
+<li>Fast, but crashes a lot</li>
+</ul></li>
+<li>Both “point and click” but automation and scripting possible</li>
+</ul>
+</section></section>
+<section>
+<section id="the-r-spatial-environment" class="title-slide slide level1 center">
+<h1>The R Spatial Environment</h1>
+
+</section>
+<section id="why-r-for-spatial-analysis" class="slide level2">
+<h2>Why R for spatial analysis?</h2>
+<ul>
+<li>Open-source and free</li>
+<li>Fully reproducible</li>
+<li>Easy to slot into existing data analysis workflows</li>
+<li>Can use tools like RMarkdown/Quarto</li>
+<li>Builds on familiar grammar like the tidyverse</li>
+</ul>
+</section>
+<section id="sf" class="slide level2">
+<h2><code>sf</code></h2>
+<ul>
+<li>We’ll use this package to work with vector data</li>
+<li>Combines geometries and attributes into a familiar-looking dataframe</li>
+<li>Uses tidy grammar</li>
+<li>Replaces the <code>sp</code> package</li>
+</ul>
+</section>
+<section id="terra" class="slide level2">
+<h2><code>terra</code></h2>
+<ul>
+<li>We’ll use this package to work with raster data</li>
+<li>Replaces the <code>raster</code> package</li>
+</ul>
+</section>
+<section id="tmap" class="slide level2">
+<h2><code>tmap</code></h2>
+<ul>
+<li>We’ll use this package to create maps
+<ul>
+<li><code>ggmap</code> also an option</li>
+<li><code>tmap</code> has more functionality, but also more complicated</li>
+<li>Both in active development, so will be interested to see how they develop over the next two years!</li>
+</ul></li>
+</ul>
+</section>
+<section id="external-software" class="slide level2">
+<h2>External Software</h2>
+<ul>
+<li>May also need to install separate software, including:
+<ul>
+<li>GEOS</li>
+<li>PROJ</li>
+<li>GDAL</li>
+</ul></li>
+<li>R packages (and QGIS) reference these programs to analyze spatial data</li>
+</ul>
+</section>
+<section id="installation-goals" class="slide level2 smaller">
+<h2>Installation Goals:</h2>
+<ol type="1">
+<li>R &gt; 4.0</li>
+<li>Install from CRAN:
+<ol type="1">
+<li>install.packages(“tidyverse”)</li>
+<li>install.packages(“sf”)</li>
+<li>install.packages(“terra”)</li>
+<li>install.packages(“remotes”)</li>
+</ol></li>
+<li>Install from repository
+<ol type="1">
+<li>remotes::install_github(“r-tmap/tmap”)</li>
+<li>remotes::install_github(“mtennekes/tmaptools”)</li>
+</ol></li>
+<li>Check loading:
+<ol type="1">
+<li>library([each package])</li>
+</ol></li>
+<li>If necessary, we’ll install GEOS, PROJ, or GDAL (depending) - Gus will help</li>
+</ol>
 <div class="footer footer-default">
 
 </div>
