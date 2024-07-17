@@ -1,6 +1,6 @@
 ---
 title: "Making a Map in R"
-date: "15 July, 2024"
+date: "17 July, 2024"
 author: "Augustus Pendleton"
 format:
   html:
@@ -225,13 +225,6 @@ tm_shape(bathymetry) +
 ::: {.cell-output-display}
 ![](Lesson_Plan_files/figure-html/glimpse-raster-1.png){fig-align='center' width=2100}
 :::
-:::
-
-::: {.cell layout-align="center"}
-
-```{.r .cell-code}
-underwater_bathymetry <- clamp(bathymetry, upper = 0, values = FALSE)
-```
 :::
 
 
@@ -762,6 +755,7 @@ tmap_save(final_map,
 And here's our final map!
 
 ![](Site_Map.png)
+
 ## Challenges:
 
 1. Change the fill of symbols to reflect concentrations of different environmental variables. What trends do you see?

@@ -144,12 +144,6 @@ tm_shape(bathymetry) +
   tm_raster()
 ```
 
-```{r remove-land}
-underwater_bathymetry <- clamp(bathymetry, upper = 0, values = FALSE)
-
-
-```
-
 Okay! That is a definite start. When we ran this command, we got some warning messages; first that our SpatRaster object was "downsampled", This is okay - it means that `tmap` reduced the resolution of our dataset to match our computer's resolution. It also warned us that since our data has both positive and negative values (elevation, in this case), it set the midpoint of our color scale to 0. This is also fine; we're going to deal with this in a sec.
 
 The major problem we notice is that this raster doesn't just contain bathymetry for Lake Ontario; it also contains the elevation of the surrounding landscape as well. We don't want this, so we need to remove these values. We'll do this using a geoprocessing tool called "clipping". First, however, we're going to project our data.
@@ -385,6 +379,7 @@ tmap_save(final_map,
 And here's our final map!
 
 ![](Site_Map.png)
+
 ## Challenges:
 
 1. Change the fill of symbols to reflect concentrations of different environmental variables. What trends do you see?
