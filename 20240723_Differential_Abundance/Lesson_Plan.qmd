@@ -1,0 +1,186 @@
+---
+title: "Differential Expression with DESeq2"
+author: "Augustus Pendleton"
+format: pdf
+editor: visual
+execute-dir: project
+indent: true
+linestretch: 1.5
+execute:
+  warning: false
+  message: false
+  error: true
+editor_options: 
+  chunk_output_type: console
+---
+
+## 
+
+## Why is differential abundance/expression/analysis?
+
+One of the most common questions we ask as scientists is whether a variable of interest changes between two conditions. Perhaps we're measuring growth rate between wild-type and a mutant, or protein production in two types of media. Then, we need to assess statistical significance of this relationship: is our dependent variable **significantly** different between the two conditions?
+
+If we're measuring a single dependent variable across two conditions, we can use common statistical tests like t-tests or Wilcoxon tests. However, our methods get more complicated if we want to measure the outcome of *multiple* variables from a single experiment. If there's only a few outcome variables, we could still do t-tests, and correct our p-values for multiple comparisons. We could also consider multivariate ANOVAs (MANOVAs). But what if we want to measure the outcome of **thousands** of variables? And what if these outcomes might be dependent on each other?
+
+This statistical challenge (assessing the significance of a treatment on hundreds to thousands of outcomes) has become increasingly prevalent as 'omics methods have expanded. Metabarcoding, RNASeq, TN-Seq, and other sequencing technologies all allow us to simultaneously measure the levels of thousands of outcomes (species abundance, gene expression, strain enrichment) over two or more conditions. What's challenging is to then determine which outcomes are statistically significant.
+
+There are many tools which have been developed to address these issues, and many papers have been published comparing different methods (e.g. [this for RNA-Seq](https://journals.plos.org/plosone/article?id=10.1371/journal.pone.0264246) and [this one for 16S](https://www.nature.com/articles/s41467-022-28034-z)). Different tools will have different levels of sensitivity (minimizing false negatives) and specificity (minimizing false positives) and no one tool is the "best" - I encourage you to read comparisons of tools and choose one that's best for your study design!
+
+Today we'll be working with RNASeq data, and we'll use on of the most popular tools for gene expression analysis, `DESeq2`.
+
+## Our Data
+
+Today, we'll be working with previously published data looking at gene expression in two strains of *Staphylococcus aureus*. In \[Waters et al., 2016\](<https://onlinelibrary.wiley.com/doi/full/10.1111/mmi.13404>), they performed RNASeq, comparing gene expression in wild-type and a $\Delta$*codY* mutant. CodY is a global transcriptional regulator which responds to depletions in branched-chain amino acids to modify gene expression. 
+
+There's been a few steps which I've done, before we get started in this tutorial. We received sequencing data for two technical replicates of each condition. This data was cleaned and trimmed, and aligned to a reference genome (MRSA252). This produces .bam files. Then, I used the `featureCounts` command in the `subread` package to summarize reads for each feature (gene). We'll load and work with those featureCounts today to start the lesson. 
+
+
+```{r prep-work, eval = FALSE, include = FALSE}
+
+bam_files <- list.files(path="data",
+                        pattern="*.bam",
+                        full.names=TRUE)
+
+feature_counts <- Rsubread::featureCounts(files=bam_files,
+                          annot.ext = "data/MRSA252_annotations.gff3",
+                          isGTFAnnotationFile = T,
+                          GTF.attrType = "ID",
+                          GTF.featureType="gene",
+                          GTF.attrType.extra = "Name")
+
+save(feature_counts,
+     file = "data/feature_counts.RData")
+```
+
+
+## Loading packages and feature counts
+
+First, we'll load necessary packages for today. Next, we'll load our featureCounts data, and explore a bit about the object. 
+
+```{r load-data-and-packages}
+library(tidyverse)
+library(DESeq2)
+library(ggrepel)
+library(ggmagnify)
+
+load("data/feature_counts.RData") # Load feature counts
+
+glimpse(feature_counts) # Look at list
+```
+
+The feature counts output is a list with four slots. The `counts` slot is the most important to us, as it contains the number of reads mapped to each feature (gene) in each bam file (condition). Another useful slot is `stat`, which shows how many reads were mapped for each replicate - this could be important if on condition or replicate had a very different number of assigned reads!
+
+Next, to run DESeq2, we'll need to extract the count data from our `feature_counts` object and create a `DESeqDataSet`. 
+
+```{r make-DESeqDataSet}
+
+just_counts <- feature_counts$counts[rowSums(feature_counts$counts) > 1000,]
+
+head(just_counts)
+
+strain_info <- data.frame(file = c("codY_R61K_1.bam",
+                                   "codY_R61K_2.bam",
+                                   "wt_1.bam",
+                                   "wt_2.bam"),
+                          strain = c("codY",
+                                     "codY",
+                                     "wt",
+                                     "wt"))
+
+deseq_ds <- DESeqDataSetFromMatrix(countData = just_counts,
+                                   colData = strain_info,
+                                   design = ~strain)
+```
+
+Next, we'll run DESeq2 to test for differential gene expression.
+
+```{r run-deseq2}
+
+deseq_object <- DESeq(deseq_ds)
+
+glimpse(deseq_object)
+
+```
+
+The results of the `DESeq` command are a complex S4 object with lots of info about how the model was run. To access information that might be more relevant to us, we'll use a separate command, `results`
+
+```{r get-deseq-results}
+
+deseq_results <- results(deseq_object) %>%
+  as.data.frame() %>% # Convert to dataframe
+  mutate(gene = row.names(.)) # Add new column of gene name
+
+head(deseq_results)
+```
+
+This gives us a data frame containing two very important pieces of information: the log2FoldChange (how much that gene is enriched in one condition vs. the other) and padj - the adjusted p-value. We'll use this information to make our volcano plot. One annoying thing we might notice is that our genes are annotated by the GeneID - a unique identifier for each gene in this genome. However, we often want to the gene name itself. We'll access that info from out `feature_counts` object and join it to our DESeq results. 
+
+```{r join-gene-name}
+annotations <- feature_counts$annotation %>%
+  select(GeneID, Name) 
+
+clean_deseq_results <- deseq_results %>%
+                            left_join(annotations,
+                                      by = c("gene" = "GeneID")) %>%
+  filter(Name != "codY")
+
+head(clean_deseq_results)
+```
+
+## Plotting our DESeq Results
+
+```{r filter-for-high-sig}
+sig <- clean_deseq_results %>%
+  filter(padj < 0.05, abs(log2FoldChange) > 1)
+```
+
+
+## Making our Volcano Plot
+
+```{r volcano-plot}
+
+start_plot <- ggplot(data = clean_deseq_results,
+       aes(x = log2FoldChange,
+                 y = -log10(padj+1e-20),
+                 color = padj<0.05&abs(log2FoldChange)>1)) + 
+  geom_point(position = position_jitter(width = 0, height = .5)) + 
+  coord_cartesian(xlim = c(-5, 5),
+                  ylim = c(-2, 30)) +
+  scale_color_manual(values = c("grey90", "black")) + 
+  labs(x = bquote(log[2](Fold~Change)),
+       y = bquote(-log[10](Adjusted~p~value))) + 
+  theme_classic() + 
+  theme(legend.position = "none") + 
+  ggrepel::geom_text_repel(data = sig,
+                           position = position_jitter(width = 0, height = 0.5),
+                           aes(label = Name),
+                           point.padding = 2,
+                           seed = 10,
+                           size = 2,
+                           max.overlaps = 12) 
+  
+final_plot <- start_plot +
+   ggmagnify::geom_magnify(aes(from = log2FoldChange < -2.5 & padj < 1e-20),
+                          to = c(-5,-2,22,30)) + 
+   annotate(geom = "segment",
+              x = c(-.2,.2),
+              xend = c(-2,2),
+              y = -1,
+              yend = -1,
+              arrow = arrow(type = "closed",
+                            length = unit(0.02, "npc"))) + 
+   annotate(geom = "text",
+           x = c(-2,2),
+           y = -1,
+           label = c("High~'in'~Delta*italic(codY)",
+                     "High~'in'~WT"),
+           parse = TRUE,
+           hjust = c(1.1,-.1)) 
+ 
+ggsave(final_plot,
+       filename  = "final_volcano.png",
+       height = 5, width = 5, units = "in")
+
+```
+
+![](final_volcano.png)
