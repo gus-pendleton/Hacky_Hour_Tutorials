@@ -30,13 +30,14 @@ Today we'll be working with RNASeq data, and we'll use on of the most popular to
 
 ## Our Data
 
-Today, we'll be working with previously published data looking at gene expression in two strains of *Staphylococcus aureus*. In \[Waters et al., 2016\](<https://onlinelibrary.wiley.com/doi/full/10.1111/mmi.13404>), they performed RNASeq, comparing gene expression in wild-type and a $\Delta$*codY* mutant. CodY is a global transcriptional regulator which responds to depletions in branched-chain amino acids to modify gene expression. 
+We'll be working with previously published data looking at gene expression in two strains of *Staphylococcus aureus*. In \[Waters et al., 2016\](<https://onlinelibrary.wiley.com/doi/full/10.1111/mmi.13404>), they performed RNASeq, comparing gene expression in wild-type and a $\Delta$*codY* mutant. CodY is a global transcriptional regulator which responds to depletions in branched-chain amino acids to modify gene expression. In the original paper, they tested a range of *codY* mutants across a spectrum of activity; today we'll just use one of them.
 
 There's been a few steps which I've done, before we get started in this tutorial. We received sequencing data for two technical replicates of each condition. This data was cleaned and trimmed, and aligned to a reference genome (MRSA252). This produces .bam files. Then, I used the `featureCounts` command in the `subread` package to summarize reads for each feature (gene). We'll load and work with those featureCounts today to start the lesson. 
 
 
-```{r prep-work, eval = FALSE, include = FALSE}
+```{r prep-work, eval = FALSE}
 
+# PREVIOUS WORK
 bam_files <- list.files(path="data",
                         pattern="*.bam",
                         full.names=TRUE)
@@ -58,10 +59,10 @@ save(feature_counts,
 First, we'll load necessary packages for today. Next, we'll load our featureCounts data, and explore a bit about the object. 
 
 ```{r load-data-and-packages}
-library(tidyverse)
-library(DESeq2)
-library(ggrepel)
-library(ggmagnify)
+library(tidyverse) # Necessary for data manipulation
+library(DESeq2) # Tests differential gene expression
+library(ggrepel) # For plotting non-overlapping text labels
+library(ggmagnify) # Optional; to produce inset plot
 
 load("data/feature_counts.RData") # Load feature counts
 
@@ -70,14 +71,15 @@ glimpse(feature_counts) # Look at list
 
 The feature counts output is a list with four slots. The `counts` slot is the most important to us, as it contains the number of reads mapped to each feature (gene) in each bam file (condition). Another useful slot is `stat`, which shows how many reads were mapped for each replicate - this could be important if on condition or replicate had a very different number of assigned reads!
 
-Next, to run DESeq2, we'll need to extract the count data from our `feature_counts` object and create a `DESeqDataSet`. 
+Next, to run DESeq2, we'll need to extract the count data from our `feature_counts` object and create a `DESeqDataSet`. This will need a separate dataframe, which describes the metadata for each sequencing file. In this case, the strain. In other designs,this could be sample collection time or media type.
 
 ```{r make-DESeqDataSet}
-
+ # Just access the counts, and only keep geens with have at least 1000 reads
 just_counts <- feature_counts$counts[rowSums(feature_counts$counts) > 1000,]
 
 head(just_counts)
 
+# Create a dataframe which describes metadata for each seq. file
 strain_info <- data.frame(file = c("codY_R61K_1.bam",
                                    "codY_R61K_2.bam",
                                    "wt_1.bam",
@@ -87,9 +89,11 @@ strain_info <- data.frame(file = c("codY_R61K_1.bam",
                                      "wt",
                                      "wt"))
 
+# Construct DESeq Dataset
 deseq_ds <- DESeqDataSetFromMatrix(countData = just_counts,
                                    colData = strain_info,
                                    design = ~strain)
+# The ~strain shows we want to test across the strain variable
 ```
 
 Next, we'll run DESeq2 to test for differential gene expression.
@@ -102,7 +106,7 @@ glimpse(deseq_object)
 
 ```
 
-The results of the `DESeq` command are a complex S4 object with lots of info about how the model was run. To access information that might be more relevant to us, we'll use a separate command, `results`
+The results of the `DESeq` command are a complex S4 object with lots of info about how the model was run. To access information that will be more relevant to us, we'll use a separate command, `results`, and cleanup the object slightly.
 
 ```{r get-deseq-results}
 
@@ -113,21 +117,32 @@ deseq_results <- results(deseq_object) %>%
 head(deseq_results)
 ```
 
-This gives us a data frame containing two very important pieces of information: the log2FoldChange (how much that gene is enriched in one condition vs. the other) and padj - the adjusted p-value. We'll use this information to make our volcano plot. One annoying thing we might notice is that our genes are annotated by the GeneID - a unique identifier for each gene in this genome. However, we often want to the gene name itself. We'll access that info from out `feature_counts` object and join it to our DESeq results. 
+This gives us a data frame containing two very important pieces of information: `log2FoldChange` (how much that gene is enriched in one condition vs. the other) and `padj` (the adjusted p-value). We'll use this information to make our volcano plot. One annoying thing we might notice is that our genes are annotated by the GeneID - a unique identifier for each gene in this genome. However, we often want to the gene name itself. We'll access that info from out `feature_counts` object and join it to our DESeq results. 
 
 ```{r join-gene-name}
+# Pull out gene annotations
 annotations <- feature_counts$annotation %>%
   select(GeneID, Name) 
 
+# Join gene names onto our results
 clean_deseq_results <- deseq_results %>%
                             left_join(annotations,
                                       by = c("gene" = "GeneID")) %>%
-  filter(Name != "codY")
+  filter(Name != "codY") # Also, remove codY
 
 head(clean_deseq_results)
 ```
 
-## Plotting our DESeq Results
+Much better! While some genes aren't named, this is more informative than the Gene IDs.
+
+# Plotting our DESeq Results
+
+There is no "one-good-way" to analyze differential abundance data. Popular choices include heat maps, volcano plots, and barbell plots, and large tables showing the biggest changes. As a primary researcher, you'll need to decide what data is interesting and worth showing. For today, we'll focus on a volcano plot, with the goal to see two things:
+
+1. Were more genes turned "on" or "off" due to codY deletion?
+2. What genes were **most** different between conditions?
+
+There are thousands of genes in this dataset; it's impossible for us to show all of them. Often, we also make semi-arbitrary cut-offs as to what we deem "significantly different". One common decision are genes whose adjust p-values are < 0.05, and whose log2FoldChange is > 1 (so at least double). Below, we'll make a separate dataframe for these "strongly different" genes, which we'll use for labeling later on.
 
 ```{r filter-for-high-sig}
 sig <- clean_deseq_results %>%
@@ -135,22 +150,30 @@ sig <- clean_deseq_results %>%
 ```
 
 
-## Making our Volcano Plot
+## Making our Volcano Plot 
+
+You'll see there's a lot going on in the code below - that's okay! Good visuals take time and lots of small adjustments to have them look the best they can. During Hacky Hour, we'll build this plot up one step at a time, and explain my design choices for each layer.
 
 ```{r volcano-plot}
 
 start_plot <- ggplot(data = clean_deseq_results,
        aes(x = log2FoldChange,
-                 y = -log10(padj+1e-20),
-                 color = padj<0.05&abs(log2FoldChange)>1)) + 
-  geom_point(position = position_jitter(width = 0, height = .5)) + 
-  coord_cartesian(xlim = c(-5, 5),
-                  ylim = c(-2, 30)) +
-  scale_color_manual(values = c("grey90", "black")) + 
-  labs(x = bquote(log[2](Fold~Change)),
+                 y = -log10(padj+1e-20), # Add small value to limits y-axis
+                 color = padj<0.05&abs(log2FoldChange)>1)) + # Color by significance and effect size
+  geom_point(position = position_jitter(width = 0, height = .5)) +  # Add points with some y-axis jitter
+  coord_cartesian(xlim = c(-5, 5), # Make x-axis symmetrical
+                  ylim = c(-2, 30)) + 
+  # Define colors for significant vs. insig. genes
+  scale_color_manual(values = c("grey90", "black")) +
+  # Make nice labels - bquote lets us include subscripts
+  labs(x = bquote(log[2](Fold~Change)), 
        y = bquote(-log[10](Adjusted~p~value))) + 
+  # Use a clean theme
   theme_classic() + 
+  # Remove legend
   theme(legend.position = "none") + 
+  # Add text labels for sig. genes - some tweaking here
+  # to maximize the number and their location!
   ggrepel::geom_text_repel(data = sig,
                            position = position_jitter(width = 0, height = 0.5),
                            aes(label = Name),
@@ -158,10 +181,17 @@ start_plot <- ggplot(data = clean_deseq_results,
                            seed = 10,
                            size = 2,
                            max.overlaps = 12) 
-  
+
+# Preview start_plot
+start_plot
+
+# Now, finish off with inset
+
 final_plot <- start_plot +
+  # Add inset
    ggmagnify::geom_magnify(aes(from = log2FoldChange < -2.5 & padj < 1e-20),
                           to = c(-5,-2,22,30)) + 
+  # Annotate arrows
    annotate(geom = "segment",
               x = c(-.2,.2),
               xend = c(-2,2),
@@ -169,6 +199,7 @@ final_plot <- start_plot +
               yend = -1,
               arrow = arrow(type = "closed",
                             length = unit(0.02, "npc"))) + 
+  # Annotate arrow labels
    annotate(geom = "text",
            x = c(-2,2),
            y = -1,
@@ -177,10 +208,19 @@ final_plot <- start_plot +
            parse = TRUE,
            hjust = c(1.1,-.1)) 
  
+# Preview final plot
+final_plot
+
+# Save final plot - note, all of our tweaking to get things just right
+# had to be previewed in this final, saved plot!
 ggsave(final_plot,
        filename  = "final_volcano.png",
        height = 5, width = 5, units = "in")
 
 ```
 
+
 ![](final_volcano.png)
+
+
+There we have it! I think that's quite nice. We see that more genes are expressed in tye codY-depleted strain, which makes sense as CodY is a repressor. We also find trends for which genes are derepressed, including purine synthesis (*pur* operon), the *opp* operon, which encodes an oligopeptide transporter, and genes for amino acid synthesis, including *lysC* and *ilvC*. All of these are important responses to nutrient starvation. We also see agrD pop up - an important two-component system which activates virulence responses, hinting towards CodY's important regulation of virulence. We've already learned a ton from just one plot that we made!
