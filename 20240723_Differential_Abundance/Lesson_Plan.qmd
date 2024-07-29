@@ -32,8 +32,7 @@ Today we'll be working with RNASeq data, and we'll use on of the most popular to
 
 We'll be working with previously published data looking at gene expression in two strains of *Staphylococcus aureus*. In \[Waters et al., 2016\](<https://onlinelibrary.wiley.com/doi/full/10.1111/mmi.13404>), they performed RNASeq, comparing gene expression in wild-type and a $\Delta$*codY* mutant. CodY is a global transcriptional regulator which responds to depletions in branched-chain amino acids to modify gene expression. In the original paper, they tested a range of *codY* mutants across a spectrum of activity; today we'll just use one of them.
 
-There's been a few steps which I've done, before we get started in this tutorial. We received sequencing data for two technical replicates of each condition. This data was cleaned and trimmed, and aligned to a reference genome (MRSA252). This produces .bam files. Then, I used the `featureCounts` command in the `subread` package to summarize reads for each feature (gene). We'll load and work with those featureCounts today to start the lesson. 
-
+There's been a few steps which I've done, before we get started in this tutorial. We received sequencing data for two technical replicates of each condition. This data was cleaned and trimmed, and aligned to a reference genome (MRSA252). This produces .bam files. Then, I used the `featureCounts` command in the `subread` package to summarize reads for each feature (gene). We'll load and work with those featureCounts today to start the lesson.
 
 ```{r prep-work, eval = FALSE}
 
@@ -53,10 +52,9 @@ save(feature_counts,
      file = "data/feature_counts.RData")
 ```
 
-
 ## Loading packages and feature counts
 
-First, we'll load necessary packages for today. Next, we'll load our featureCounts data, and explore a bit about the object. 
+First, we'll load necessary packages for today. Next, we'll load our featureCounts data, and explore a bit about the object.
 
 ```{r load-data-and-packages}
 library(tidyverse) # Necessary for data manipulation
@@ -117,7 +115,7 @@ deseq_results <- results(deseq_object) %>%
 head(deseq_results)
 ```
 
-This gives us a data frame containing two very important pieces of information: `log2FoldChange` (how much that gene is enriched in one condition vs. the other) and `padj` (the adjusted p-value). We'll use this information to make our volcano plot. One annoying thing we might notice is that our genes are annotated by the GeneID - a unique identifier for each gene in this genome. However, we often want to the gene name itself. We'll access that info from out `feature_counts` object and join it to our DESeq results. 
+This gives us a data frame containing two very important pieces of information: `log2FoldChange` (how much that gene is enriched in one condition vs. the other) and `padj` (the adjusted p-value). We'll use this information to make our volcano plot. One annoying thing we might notice is that our genes are annotated by the GeneID - a unique identifier for each gene in this genome. However, we often want to the gene name itself. We'll access that info from out `feature_counts` object and join it to our DESeq results.
 
 ```{r join-gene-name}
 # Pull out gene annotations
@@ -139,18 +137,17 @@ Much better! While some genes aren't named, this is more informative than the Ge
 
 There is no "one-good-way" to analyze differential abundance data. Popular choices include heat maps, volcano plots, and barbell plots, and large tables showing the biggest changes. As a primary researcher, you'll need to decide what data is interesting and worth showing. For today, we'll focus on a volcano plot, with the goal to see two things:
 
-1. Were more genes turned "on" or "off" due to codY deletion?
-2. What genes were **most** different between conditions?
+1.  Were more genes turned "on" or "off" due to codY deletion?
+2.  What genes were **most** different between conditions?
 
-There are thousands of genes in this dataset; it's impossible for us to show all of them. Often, we also make semi-arbitrary cut-offs as to what we deem "significantly different". One common decision are genes whose adjust p-values are < 0.05, and whose log2FoldChange is > 1 (so at least double). Below, we'll make a separate dataframe for these "strongly different" genes, which we'll use for labeling later on.
+There are thousands of genes in this dataset; it's impossible for us to show all of them. Often, we also make semi-arbitrary cut-offs as to what we deem "significantly different". One common decision are genes whose adjust p-values are \< 0.05, and whose log2FoldChange is \> 1 (so at least double). Below, we'll make a separate dataframe for these "strongly different" genes, which we'll use for labeling later on.
 
 ```{r filter-for-high-sig}
 sig <- clean_deseq_results %>%
   filter(padj < 0.05, abs(log2FoldChange) > 1)
 ```
 
-
-## Making our Volcano Plot 
+## Making our Volcano Plot
 
 You'll see there's a lot going on in the code below - that's okay! Good visuals take time and lots of small adjustments to have them look the best they can. During Hacky Hour, we'll build this plot up one step at a time, and explain my design choices for each layer.
 
@@ -219,8 +216,6 @@ ggsave(final_plot,
 
 ```
 
-
 ![](final_volcano.png)
-
 
 There we have it! I think that's quite nice. We see that more genes are expressed in tye codY-depleted strain, which makes sense as CodY is a repressor. We also find trends for which genes are derepressed, including purine synthesis (*pur* operon), the *opp* operon, which encodes an oligopeptide transporter, and genes for amino acid synthesis, including *lysC* and *ilvC*. All of these are important responses to nutrient starvation. We also see agrD pop up - an important two-component system which activates virulence responses, hinting towards CodY's important regulation of virulence. We've already learned a ton from just one plot that we made!
