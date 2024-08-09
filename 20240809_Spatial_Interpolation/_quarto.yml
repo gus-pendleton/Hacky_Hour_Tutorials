@@ -1,0 +1,31 @@
+project:
+  title: "Spatial Inteprolation Example"
+  execute-dir: project
+format:
+  html:
+    toc: true
+    toc-depth: 2
+    toc-location: left
+    code-overflow: scroll
+    theme: superman
+    embed-resources: false
+execute: 
+  keep-md: true
+editor_options: 
+  chunk_output_type: console
+knitr:
+  opts_chunk:
+    eval: true
+    echo: true
+    include: true
+    warning: false
+    collapse: false
+    message: false
+    dpi: 300
+    dev: png
+    dev.args: { bg: "transparent" }
+    error: true
+    fig.align: center
+
+
+

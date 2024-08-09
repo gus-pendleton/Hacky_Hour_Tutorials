@@ -1,0 +1,149 @@
+---
+title: "Spatial Interpolation Example"
+author: Augustus Pendleton
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Purpose of Document
+
+In our Great Lakes work, we often want to spatially interpolate variables across the lake. Here, I show one approach to doing this, using distance-weighted interpolation from the `gstat` package.
+
+## Installing and Loading Packages and Data
+
+First, we need to install and load packages. Note that some versions **do** matter in this case, as `tmap` is undergoing breaking changes as it transitions to v4. Also, if you're a Mac or Linux user, you may need to separately install the `PROJ`, `GDAL` and/or `GEOS` software. I recommend you do this using homebrew.
+
+```{r install-and-load}
+# install.packages("tidyverse")
+# install.packages("sf")
+# install.packages("terra")
+# install.packages("gstat")
+# install.packages("remotes")
+# install.packages("pacman")
+# remotes::install_github("r-tmap/tmap")
+# remotes::install_github("mtennekes/tmaptools")
+
+pacman::p_load(tidyverse,
+               sf,
+               terra,
+               gstat,
+               tmap,
+               tmaptools,
+               install = FALSE)
+```
+
+Next, we'll load our data objects. First, we have an outline of Lake Ontario, which I downloaded from the USGS. We'll also project it to a Great Lakes specific projection.
+
+```{r load-outline}
+
+ont_outline <- read_sf("data/ontario_outline/hydro_p_LakeOntario.shp")
+
+proj_outline <- ont_outline %>%
+                    st_transform(crs = "EPSG:3174") %>%
+  st_union()
+
+tm_shape(proj_outline) + 
+  tm_borders()
+
+```
+
+Beautiful. Next, we'll load in our data to plot. In this case, it's a csv file which contains temperature measurements for stations across Lake Ontario, collected by the EPA on the September 2023 CSMI cruise.
+
+```{r read-temps}
+
+temp_df <- read_csv("data/temp_measurements.csv")
+
+glimpse(temp_df)
+
+temp_sf <- temp_df %>%
+  st_as_sf(coords = c("longitude","latitude"), crs = "EPSG:4326") %>%
+  st_transform(crs = "EPSG:3174")
+
+tm_shape(proj_outline) + 
+  tm_borders() + 
+  tm_shape(temp_sf) + 
+  tm_symbols(fill = "temperature")
+```
+
+Okay! That's looking good. Let's move on to interpolation.
+
+## Interpolation
+
+Now, we can assume that surface temperature is a continuous variable, and it's generally reasonable to assume that we can interpolate temperatures between stations. This means that our end goal is to go from *vector* data (discrete points) to *raster* data (continuous data defined by the fill of a grid). What we're essentially going to do is use our point measurements to create a function that predicts temperature across a 2D grid. In order to do that, we'll first define a the resolution and spatial extent of the grid, and then map our values across it.
+
+First, let's define our grid.
+
+```{r defining-grid}
+
+# Create an empty raster from our ontario outline
+# We'll first need to simplify our outline to an sf, not sfc
+outline_sf <- st_sf(proj_outline)
+
+grid <- rast(outline_sf, nrows = 320, ncols = 640)
+
+tm_shape(grid) + 
+  tm_raster()
+```
+
+Thrilling - we have an empty raster. Changing the nrows and ncols will change the resolution of that grid, which will affect how "smooth" your raster looks at the end. However, higher-resolution grids will take longer to calculate.
+
+In the enxt step, we'll use a spatial model (defined by gstat) to predict the values of a variable at specified locations. Crucially, we can't feed this model a raster grid; rather, it accepts vector points. As such, we need to extract the midpoint of each raster grid cell as a point, and coerce it to an sf object. We'll also filter it such that we only predict values within our Lake Ontario outline.
+
+```{r make_raster_grid}
+
+# Extract mid points
+xy <- xyFromCell(grid, 1:ncell(grid))
+
+# Coerce to project point geometry
+points_to_predict <- xy %>%
+                        as.data.frame(xy) %>%
+                        st_as_sf(coords = c("x","y"),
+                                 crs = "EPSG:3174") %>%
+                        st_filter(proj_outline) # Filter to be within Lake Ontario
+```
+
+Now that we've prepped those, we can move to interpolation. First, we build the model, which describes temperature over space, and then we predict the temperature for each of our `points_to_predict`. This is similar to using `lm` to build a linear model, and then using predict to calculate new values in a dataframe.
+
+The crucial tuning parameter here is `idp`, which affects how quickly our temperature prediction decays towards the mean as you travel away from a measure point. This is worth playing around with to achieve a rational-looking map.
+
+```{r interpolation}
+
+# Build the model
+ip_model <- gstat(formula = temperature ~ 1, 
+                  locations = temp_sf, 
+                  nmax = nrow(temp_sf), 
+                  set = list(idp = 3))
+
+# Predict temps
+temp_preds <- predict(ip_model, points_to_predict) %>% 
+  vect() # Needed to work in terra
+
+# Convert points to a raster  
+output_raster <- terra::rasterize(temp_preds, grid, field = "var1.pred", fun = "mean")
+
+# Check our new raster
+tm_shape(output_raster) + 
+  tm_raster()
+```
+
+Wow! We just made an interpolated raster of our data. Let's clean up the plotting so we finish with a beautiful map.
+
+```{r final-map}
+
+tm_shape(output_raster) + 
+  tm_raster(col.scale = tm_scale_continuous(values = "tol.sunset"),
+            col.legend = tm_legend(title = "Temperature (°C)",
+                                   orientation = "landscape",
+                                   frame = FALSE)) + 
+  tm_layout(frame = FALSE) + 
+  tm_compass(position = tm_pos_auto_in()) + 
+  tm_scalebar(breaks = c(0,25, 50), position = c(.7,0.2), text.size = .6)
+```
+
+Looks good! I hope you enjoyed the tutorial.
+
+```{r session-info}
+sessionInfo()
+```
