@@ -1,0 +1,332 @@
+---
+title: "Logical Operators in R"
+author: Augustus Pendleton
+format: html
+editor: visual
+editor_options: 
+  chunk_output_type: console
+---
+
+## Using logical operators in R
+
+Today, we'll learn about how we can use logical operators in R. This allows us to make decisions based on values in our data. We'll cover the basic logical operators that are commonly used, and functions in which you use them. 
+
+
+## Load packages and data
+```{r install-and-load}
+
+library(tidyverse)
+
+data <- read_csv("data/Animal_Data.csv")
+
+```
+
+Let's preview our data:
+
+```{r preview-data}
+
+data
+
+```
+
+## Logical Operators
+
+In order to make decisions, we need to use logical operators. Below, I demonstrate the ones I use often:
+
+```{r logical-operators}
+
+# Equality ("is")
+
+1 == 1
+
+"Dog" == "Dog"
+
+"Dog" == "Cat"
+
+# Inequality ("is not")
+
+1 != 2
+
+1 != 1
+
+# Greater than/lesser than
+
+1 > 2
+
+1 < 2
+
+1 < 1
+
+# Great than or equal to/lesser than or equal to
+
+1 >= 2
+
+1 <= 1
+
+# Note - these have surpising results for characters (don't do this!)
+
+"Dog" < "Moose"
+
+"Whale" < "Fox"
+
+```
+
+A very common logical operator I use to check if a string matches a set of values is the `%in%` operator:
+
+```{r in-operator}
+
+"Dog" %in% c("Cat","Dog","Moose")
+
+"Cow" %in% c("Cat","Dog","Moose")
+
+```
+
+We can also modify and combine logical values using `!`, `&`, and `|` operators
+
+```{r modifiers}
+
+# ! "flips" a logical value
+
+(1 > 2)
+
+!(1 > 2)
+
+# & means "AND" - both conditions have to be TRUE to return a TRUE
+
+TRUE & FALSE
+TRUE & TRUE
+
+(1 > 2) & (4 < 5)
+
+# `|` means "OR" - just one of the conditions have to be TRUE to return a true
+
+TRUE | FALSE
+TRUE | TRUE
+
+(1 > 2) | (4 < 5)
+
+```
+
+Finally, there are many functions which will return a logical result. For instance, we can check the type of data we have.
+
+```{r logical-functions}
+
+is.numeric(1)
+
+is.numeric("dog")
+
+is.character("dog")
+
+```
+
+## Writing an IF statement
+
+Often, we use logicals to make a decision about how to treat a value that we pass to R. We do this using a fundamental piece of programming called an "IF" statement. Here, we'll write a basic one. 
+
+```{r first-if-statement}
+
+value <- 8
+
+# Only do the stuff in the curly brackets IF the logical is true
+if(value > 4){
+  print("Value greater than 4")
+}
+
+value <- 2
+
+if(value > 4){
+  print("Value greater than 4")
+}
+
+
+```
+
+This is a great start! Often, we might want to do something else if the value didn't meet our condition. Here, we'll add in an else statement
+
+```{r if-else}
+
+value <- 8
+
+if(value > 4){
+  print("Value greater than 4")
+}else{
+  print("Value less than 4")
+}
+
+
+```
+
+Fun! We can expand this more by adding additional else if statements
+
+
+```{r else-if}
+
+value <- 8
+
+if(value > 10){
+  print("Value greater than 10")
+}else if(value > 4){
+  print("Value between 4 and 10")
+}else{
+    print("Value less than 4")
+}
+
+```
+
+## Applying logic to vectors.
+
+Often, we want to use our logical operators to make decisions across many values, typically stored in a dataframe or a vector. All of R's logical operators are "vectorized", meaning that if you apply them to a vector, they'll return a vector of logical values. 
+
+```{r logic-on-vectors}
+
+# A reminder of our data
+data$Animal
+data$Weight_lb
+
+data$Weight_lb > 4
+
+data$Animal == "Cat"
+
+# Remember, we can also "reverse" or combine logicals
+
+!(data$Animal == "Cat")
+
+(data$Animal != "Cow") & (data$Weight_lb > 100) 
+
+```
+
+Often, we want to use logicals to return a value IF some condition is true. For example, maybe we want to classify animals as "small" if their weight is of a certain size. Let's first try to use an IF statement to accomplish this task. 
+
+```{r if-for-classifying}
+
+if(data$Weight_lb < 10){
+  "small"
+}else{
+  "big"
+}
+
+```
+
+Hmm - this gives us an error. It tells us that "the condition has length > 1". If statements expect their condition (the value inside the parenthesis) to be just a single TRUE or FALSE. Because we passed it a vector, it cannot decide which choice to make. 
+
+One option to fix this is to write a for loop (see tutorial from 20231107 if interested) to loop over the values of our vector and make each decision individually. Alternatively, R already has a function called `ifelse` to make decisions across a vector and return their corresponding values. Let's put it into action.
+
+```{r ifelse-function}
+
+ifelse(data$Weight_lb < 10, # Condition to evaluate for each value in the vector
+       "small", # Value to return if TRUE
+       "big" # Value to return if FALSE
+       )
+
+```
+
+`ifelse` is particularly useful when combined with a function from the `tidyverse` called mutate, which allows us to add a new colum onto a dataframe!
+
+```{r ifelse-in-mutate}
+
+mutate(
+  data,  # Our data object
+  size_class =  ifelse(Weight_lb < 10,
+                      "small",
+                      "big")
+)
+
+```
+
+If we want to have more complicated decisions that would use "else if" statements, we can "nest" `ifelse` functions.
+
+```{r nest-ifelse}
+
+mutate(
+  data,
+  size_class =  ifelse(Weight_lb < 10,
+                      "small",
+                      ifelse(Weight_lb < 100,
+                             "medium",
+                             "big"))
+)
+
+```
+
+As we add more conditions, it can get complicated to read the nested `ifelse` statements. In this case, the `case_when` function can be very handy
+
+```{r case_when}
+
+mutate(
+  data,
+  size_class =  case_when(Weight_lb < 10 ~ "small",
+                          Weight_lb < 100 ~ "medium",
+                          Weight_lb >= 100 ~ "big")
+)
+
+
+```
+
+We can use mutate to add multiple columns, all with different logical operators.
+
+```{r more-mutate}
+
+mutate(
+  data,
+  size_class =  case_when(Weight_lb < 10 ~ "small",
+                          Weight_lb < 100 ~ "medium",
+                          Weight_lb >= 100 ~ "big"),
+  
+  is_livestock = ifelse(Animal %in% c("Cow","Chicken","Pig"),
+                        "Livestock",
+                        "Not Livestock")
+)
+
+
+```
+
+We can also use logical operators in the `filter` command, to select rows that match a specific condition. Here, I also switch to a tidier notation using the pipe operator to chain commands together. 
+
+
+```{r filter}
+data %>%
+  mutate(
+      size_class =  case_when(Weight_lb < 10 ~ "small",
+                              Weight_lb < 100 ~ "medium",
+                              Weight_lb >= 100 ~ "big"),
+      
+      is_livestock = ifelse(Animal %in% c("Cow","Chicken","Pig"),
+                            "Livestock",
+                            "Not Livestock")
+  ) %>%
+  filter(size_class == "small")
+
+
+```
+
+We can filter on multiple conditions, by either separating logical conditions by commas (meaning AND between conditions) or using our logical operators. 
+
+```{r filter-mult-conditions}
+
+data %>%
+  mutate(
+      size_class =  case_when(Weight_lb < 10 ~ "small",
+                              Weight_lb < 100 ~ "medium",
+                              Weight_lb >= 100 ~ "big"),
+      
+      is_livestock = ifelse(Animal %in% c("Cow","Chicken","Pig"),
+                            "Livestock",
+                            "Not Livestock")
+  ) %>%
+  filter(size_class == "small",
+         is_livestock == "Livestock")
+
+data %>%
+  mutate(
+      size_class =  case_when(Weight_lb < 10 ~ "small",
+                              Weight_lb < 100 ~ "medium",
+                              Weight_lb >= 100 ~ "big"),
+      
+      is_livestock = ifelse(Animal %in% c("Cow","Chicken","Pig"),
+                            "Livestock",
+                            "Not Livestock")
+  ) %>%
+  filter(size_class == "small" | is_livestock == "Livestock")
+```
+
+You can combine and apply logical operators in an endless number of ways and they are essential to data analysis. Enjoy!
