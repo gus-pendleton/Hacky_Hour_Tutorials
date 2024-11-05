@@ -48,7 +48,7 @@ cd /local/workdir/USER/alphapulldown/data
 
 #working in my data directory/folder I want to send all of my .fasta files into one fasta file. You must do this in order to create an alignment
 
-#the cat *.fasta >JD_test.fasta specifically looks for any file ending in a .fasta and will take its information and send it to one bigger fasta file called JD_test.fasta. Of course you can name the output file anything you want it does not have to be JD_test.fasta but make it something memorable that you would like to call it!
+#the cat *.fasta > all_proteins_combined.fasta specifically looks for any file ending in a .fasta and will take its information and send it to one bigger fasta file called JD_test.fasta. Of course you can name the output file anything you want it does not have to be JD_test.fasta but make it something memorable that you would like to call it!
 cat *.fasta > all_proteins_combined.fasta
 
 
