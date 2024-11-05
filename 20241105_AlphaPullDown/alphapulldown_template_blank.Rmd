@@ -1,0 +1,158 @@
+---
+title: "AlphaPullDown Tutorial Template Version"
+author: "Sophia Aredas"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  pdf_document:
+    toc: yes
+  html_document:
+    code_folding: show
+    highlight: default
+    keep_md: yes
+    theme: journal
+    toc: yes
+    toc_float:
+      collapsed: no
+      smooth_scroll: yes
+      toc_depth: 3
+editor_options:
+  chunk_output_type: console
+---
+# Template code
+I showed you my full script with notes about how I ran AlphaPullDown but here I will have the template/skeleton/backbone code so that in case you wanted to run it, you can see where to change things to make it work!
+
+Please feel free to refer to the demo version to see how I did things if that helps as well! And of course let me know if you have any questions! This is the file called "alphapulldown_example.Rmd"
+
+# Step 0
+Acquire proteins of interest from wherever. They must be protein sequences not nucleotide!
+```{bash, eval=FALSE}
+#in your workdir create a directory/folder where you will run alphapulldown
+cd /local/workdir/USER
+mkdir alphapulldown 
+
+cd /local/workdir/USER/alphapulldown
+mkdir data
+
+cd /local/workdir/USER/alphapulldown/data
+#add your files by uploading them to the data folder
+```
+
+
+# Step 1: generate msa with colabfold (much faster than the alphafold2 based alignment pipeline)
+```{bash, eval=FALSE}
+#put all fasta protein sequences into file
+#try not to have overly complicated names the simpler the name the better if you can help it:)
+#working in my data directory/folder I want to send all of my .fasta files into one fasta file. You must do this in order to create an alignment
+cd /local/workdir/USER/alphapulldown/data
+
+#the cat *.fasta >JD_test.fasta specifically looks for any file ending in a .fasta and will take its information and send it to one bigger fasta file called JD_test.fasta. Of course you can name the output file anything you want it does not have to be JD_test.fasta but make it something memorable that you would like to call it!
+cat *.fasta > your.fasta
+
+
+#now we will be following the biohpc commands that they have listed for running alphapulldown on the server. This part can be copied and pasted and modified to fit your file names
+
+#example code
+singularity run --bind /local/local_data/colabfold_cache:/cache --bind $PWD --pwd $PWD /programs/colabfold-1.5.5/colabfold.sif colabfold_batch your.fasta xxxoutputdirectory --msa-only
+
+#what needs to get fixed
+  #your.fasta
+    # you will need to put in your fasta containing ALL the proteins. In my case that was the JD_test.fasta
+  #xxxoutputdirectory/ 
+# next you need to specify where your outputs will be. Because we are running the msa step i called the folder "msa" for multiple sequence alignment. You can call it whatever you would like and is intuitive to you
+```
+
+# Step 2: run create_individual_features.py on cbsugpu05-07
+```{bash, run-apd, eval=FALSE}
+#here we are still copying and pasting the code from the biohpc 
+
+  
+#what you need to enter if you wanted to do this yourself
+singularity exec --bind /local/local_data/alphafold-2.3.2:/db --bind $PWD --pwd $PWD /programs/alphapulldown-1.0.4/alphapulldown.sif \
+create_individual_features.py \
+  --fasta_paths=your.fasta \
+  --data_dir=/db \
+  --output_dir=whatever_output_directory \
+  --use_precomputed_msas=True \
+  --max_template_date=2024-01-01 \
+  --use_mmseqs2=True \
+  --skip_existing=False
+#again all you need to edit to get it to run is the --fasta_paths to your fasta folder and --output_dir to whatever directory you sent your msas to. In my case the fasta folder I worked with is JD_test.fasta and the output directory is called "msas"
+  
+```
+
+# Step 3: run run_multimer_jobs.pyon GPU (instructions of using two GPU units are at the end of the page)
+```{bash, eval=FALSE}
+#create two text file bait.txt,candidates.txt. The bait.txt has one line: bait protein name; the candidates.txt file has one protein name per line.
+
+  # in this case the bait.txt is the RsiG.fasta file
+  #candidates are the whiG_clade and Gobs....fasta files
+
+#here I am using my file names to demonstrate how to send everything to a file. This part depends on how many proteins you have and how you downloaded them!
+
+#to create bait.txt file 
+#this could be whatever bait you want it to be 
+cat bait.fasta > bait.txt
+
+#to create candidates 
+#it depends how many protein sequences you have and how you downloaded them but hopefully referring to my example script and this template helps! If it doesnt make sense please let me know and Ill be happy to help!
+cat candidates.fasta > candidates.txt
+
+#run the command from the current directory, which contains: bait.txt,candidates.txt, msas directory, and an empty outputdir. it could take hours or days to finish depending on number of candidate proteins.
+cd /local/workdir/USER/alphapulldown/data
+mkdir outputdir
+
+#this part is straight up from the biohpc so this is copy and paste for the most part
+#set environment variable to enable GPU to use system memory, so that large proteins can be processed
+export TF_FORCE_UNIFIED_MEMORY=1
+export XLA_PYTHON_CLIENT_MEM_FRACTION=4.0
+
+singularity exec --nv --bind /local/local_data/alphafold-2.3.2:/db --bind $PWD --pwd $PWD /programs/alphapulldown-1.0.4/alphapulldown.sif \
+run_multimer_jobs.py --mode=pulldown \
+--num_cycle=3 \
+--num_predictions_per_model=1 \
+--output_path=./outputdir \
+--data_dir=/db \
+--protein_lists=bait.txt,candidates.txt \
+--monomer_objects_dir=msas
+```
+
+# Step 4: generate a summary table
+this step can be run on any server. you just need the outputdir from the previous step
+run the command from the current directory, which has the outputdir under it
+
+Output is a csv file that you can open in Excel: predictions_with_good_interpae.csv
+```{bash, eval=FALSE}
+#make sure that during this step you are working inside your output directory folder. Mine is called outputdir. If you are in the wrong directory then this jupyter notebook part wont work
+cd outputdir/
+singularity exec --bind $PWD --pwd $PWD /programs/alphapulldown-1.0.4/alpha-analysis_jax_0.4.sif run_get_good_pae.sh --cutoff=10 --output_dir=./outputdir 
+```
+
+# Step 5: create a jupyter notebook
+```{bash, eval=FALSE}
+#again make sure that you are in the correct directory 
+cd outputdir/
+singularity exec --bind $PWD --pwd $PWD /programs/alphapulldown-1.0.4/alphapulldown.sif create_notebook.py --cutoff=5.0 --output_dir=./
+
+#after this step, you should see a file output.ipynb in the directory.
+
+#start jupyter in the outputdir
+
+singularity exec --bind $PWD --pwd $PWD /programs/alphapulldown-1.0.4/alphapulldown.sif jupyter lab --ip=0.0.0.0 --port=8017 --no-browser
+
+#you should see a URL http://cbsuxxxxx.biohpc.cornell.edu:8017/labtoken=xxxxxxxxxxxxxxxxxxxxx, copy paste the URL into a web browser, open the output.ipynb in the left panel, and execute every step in the book
+
+#this output will appear in the terminal!
+```
+
+# Optional step 6: run with alphapickle
+It seems that alphapickle is more informative for displaying clearer publication quality charts to evaluate protein-protein interactions
+```{bash, eval=FALSE}
+#Run command, output files (png and csv will be in the alphafold2 output directory)
+#the output directory needs the ABSOLUTE path not a relative path (absolute starts from the root whereas relative just starts from wherever you are located currently!)
+python /programs/alphapickle/run_AlphaPickle.py -od [here is where you put your absolute path to the output directory you want to analyze]
+
+#to extract ptm and iptm scores only
+/programs/alphafold-2.3.2/alphafoldPickle.py alphafold2_output_directory
+
+```
+
